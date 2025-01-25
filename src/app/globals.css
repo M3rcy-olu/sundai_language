@@ -1,21 +1,185 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,700&family=Inria+Sans:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Open+Sans:wght@300;600&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #000000;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
     --foreground: #ededed;
   }
 }
 
 body {
+  margin: 0;
+  padding: 0;
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "DM Sans", sans-serif;
+  overflow: hidden;
+}
+
+.home-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0;
+  gap: 7vh; /* 149/1200 */
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(132.2deg, #2f3336 18.4%, #151518 76.27%);
+}
+
+.navbar {
+  width: 100vw;
+  height: 20.42vh; /* 245/1200 */
+  flex: none;
+  order: 0;
+  align-self: stretch;
+  margin-top: 5vh; /* Added margin-top */
+}
+
+.logo {
+  position: absolute;
+  width: 100%;
+  font-family: "Inria Sans";
+  font-style: normal;
+  font-weight: 400;
+  font-size: 2.33vh; /* 28/1200 */
+  line-height: 2.83vh; /* 34/1200 */
+  display: flex;
+  align-items: center;
+  text-align: center;
+  justify-content: center;
+  color: #ffffff;
+}
+
+.frame-2 {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0;
+  gap: 8vh; /* 131/1200 */
+  width: 65.89vw; /* 1265/1920 */
+  height: 37.42vh; /* 449/1200 */
+  flex: none;
+  order: 1;
+}
+
+.frame-1 {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 0;
+  margin: 0 auto;
+  width: 35.36vw; /* 679/1920 */
+  height: 32.08vh; /* 385/1200 */
+}
+
+.title {
+  font-family: "Inria Sans";
+  font-style: normal;
+  font-weight: 400;
+  font-size: 6.67vh; /* 80/1200 */
+  line-height: 8vh; /* 96/1200 */
+  color: #ffffff;
+  width: 30vw; /* 679/1920 */
+}
+
+.gradient {
+  /* Speak Language. Don’t just “Learn”. */
+
+  background: linear-gradient(106.79deg, #b3a8da 20%, #3a344f 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
+}
+
+.subtext {
+  font-family: "Inria Sans";
+  font-style: normal;
+  font-weight: 400;
+  font-size: 2vh; /* 24/1200 */
+  line-height: 2.42vh; /* 29/1200 */
+  color: #c7c4d2;
+  margin-top: 1.67vh; /* 20/1200 */
+  width: 25vw;
+}
+
+.speak-button {
+  width: 10.68vw; /* 205/1920 */
+  height: 6.75vh; /* 81/1200 */
+  background: #ffffff;
+  border-radius: 2.67vh;
+  margin-top: 3.33vh;
+  order: 2;
+}
+
+.scenario {
+  font-family: "Inria Sans";
+  font-style: normal;
+  font-weight: 400;
+  font-size: 2vh; /* 24/1200 */
+  line-height: 2.42vh; /* 29/1200 */
+  color: #252527;
+}
+
+.ai {
+  margin: 0 auto;
+  width: 20.05vw; /* 385/1920 */
+  text-align: center;
+  color: #c7c4d2;
+  font-family: "Inria Sans";
+  font-size: 2vh; /* 24/1200 */
+  line-height: 2.42vh; /* 29/1200 */
+  text-align: center;
+}
+
+.circle {
+  position: relative;
+  margin: 3vh auto;
+
+  width: 25vh; /* 20/1200 */
+  height: 25vh; /* 20/1200 */
+  border-radius: 50%;
+  background: linear-gradient(180deg, #ffffff 40%, #3a344f 100%);
+}
+
+/* Headers */
+.header {
+  width: 35.36vw; /* 679/1920 */
+  height: 20.33vh; /* 244/1200 */
+}
+
+/* Inside auto layout */
+.header-flex {
+  flex: none;
+  order: 0;
+  flex-grow: 0;
+}
+
+/* Speak Language. Don't just "Learn". */
+.title-sub-pos {
+  width: 27.71vw; /* 532/1920 */
+  height: 11.75vh; /* 141/1200 */
+}
+
+/* Inside auto layout */
+.title-sub-flex {
+  flex: none;
+  order: 1;
+  flex-grow: 0;
+}
+
+/* Frame 1 */
+.frame-1-flex {
+  flex: none;
+  order: 0;
+  flex-grow: 0;
 }
