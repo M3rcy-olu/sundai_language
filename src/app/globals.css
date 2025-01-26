@@ -12,16 +12,27 @@
     --foreground: #ededed;
   }
 }
-
+@keyframes gradientAnimation {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 75%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
 body {
   margin: 0;
   padding: 0;
   color: var(--foreground);
-  background: var(--background);
   font-family: "DM Sans", sans-serif;
   width: 100vw;
   height: 100vh;
-  background: linear-gradient(132.2deg, #2f3336 18.4%, #151518 76.27%);
+  background: linear-gradient(-45deg, #2f3336, #151518, #373a3d, #211e25);
+  background-size: 400% 400%;
+  animation: gradientAnimation 30s ease infinite;
   overflow: hidden;
 }
 
@@ -91,7 +102,7 @@ body {
 }
 
 .gradient {
-  /* Speak Language. Don’t just “Learn”. */
+  /* Speak Language. Don't just "Learn". */
 
   background: linear-gradient(106.79deg, #b3a8da 20%, #3a344f 100%);
   -webkit-background-clip: text;
