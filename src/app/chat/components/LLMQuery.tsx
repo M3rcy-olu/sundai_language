@@ -9,7 +9,7 @@ import { NextResponse } from "next/server";
 
 export default function LLMQuery() {
   const [userInput, setUserInput] = useState('');
-  const [response, setResponse] = useState<{ Spanish: string; English: string }[]>([]);
+  const [response, setResponse] = useState<{ Student_Spanish: string, Spanish_Response: string, English_Analysis: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -63,10 +63,10 @@ export default function LLMQuery() {
           {response.map((item, index) => (
             <div key={index} className="border rounded-md p-4">
               <div className="font-semibold text-green-600">
-                Spanish: {item.Spanish}
+                Spanish: {item.Spanish_Response}
               </div>
               <div className="mt-2 text-gray-700">
-                English: {item.English}
+                English: {item.English_Analysis}
               </div>
             </div>
           ))}
