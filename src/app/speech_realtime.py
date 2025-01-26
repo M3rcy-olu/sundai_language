@@ -1,3 +1,6 @@
+# Speech Realtime
+# The accuracy of the transcription is not great. This would be an area for improvement.
+
 import asyncio
 import pyaudio
 import numpy as np
@@ -6,24 +9,42 @@ from dotenv import load_dotenv
 import os
 import wave
 import tempfile
-import whisper
+# import whisper  # Commented out as we'll use OpenAI API instead
 import torch
+from openai import OpenAI  # Add OpenAI client import
+from scipy import signal
 
 # Load environment variables
 load_dotenv('../../.env.local')
 
+# REPLICATE CODE
+# import replicate
+
+# input = {
+#     "audio": "https://replicate.delivery/mgxm/e5159b1b-508a-4be4-b892-e1eb47850bdc/OSR_uk_000_0050_8k.wav"
+# }
+
+# output = replicate.run(
+#     "openai/whisper:8099696689d249cf8b122d833c36ac3f75505c666a395ca40ef26f68e7d3d16e",
+#     input=input
+# )
+# print(output)
+
 class AudioHandler:
     def __init__(self):
-        print("Loading Whisper model...")
-        self.model = whisper.load_model("base")
-        self.CHUNK = 1024 * 4
+        # print("Loading Whisper model...")
+        # self.model = whisper.load_model("medium")  # Comment out local model
+
+        self.client = OpenAI(
+                api_key=os.getenv('OPENAI_API_KEY'))
+        self.CHUNK = 2048  # Reduced from 4096 for more frequent sampling
         self.FORMAT = pyaudio.paFloat32
         self.CHANNELS = 1
         self.RATE = 16000  # 16kHz for Whisper compatibility
         self.p = pyaudio.PyAudio()
         self.buffer = []
-        self.BUFFER_SECONDS = 2.0  # Increased buffer for better transcription
-        self.SILENCE_THRESHOLD = 0.01
+        self.BUFFER_SECONDS = 4.0  # Increased from 3.0 for better context
+        self.SILENCE_THRESHOLD = 0.008  # Adjusted for better speech detection
         
         print("\nAvailable Audio Devices:")
         for i in range(self.p.get_device_count()):
@@ -68,25 +89,76 @@ class AudioHandler:
                 print(f"\nError capturing audio: {e}")
                 break
 
+    def save_audio_chunk(self, audio_data, filename):
+        """Save audio data to a WAV file for API processing"""
+        audio_data_int = (audio_data * 32767).astype(np.int16)
+        with wave.open(filename, 'wb') as wf:
+            wf.setnchannels(self.CHANNELS)
+            wf.setsampwidth(2)  # 2 bytes for int16
+            wf.setframerate(self.RATE)
+            wf.writeframes(audio_data_int.tobytes())
+        
     async def transcribe_audio(self, audio_data):
-        """Transcribe audio data using Whisper"""
+        """Transcribe audio data using Whisper API"""
         try:
-            # Ensure audio data is in the correct format (float32, normalized between -1 and 1)
-            audio_data = audio_data.astype(np.float32)
+            ############################
+            # #Transcription using local model
+            ############################
+            # Add noise reduction
+            # audio_data = self.reduce_noise(audio_data)
             
-            # Use Whisper to transcribe
-            result = self.model.transcribe(
-                audio_data,
-                language="en",
-                task="transcribe",
-                temperature=0.2,
-                fp16=torch.cuda.is_available()
-            )
+            # # Normalize audio
+            # audio_data = audio_data / np.max(np.abs(audio_data))
             
-            return result["text"].strip()
+            # # Use Whisper to transcribe
+            # result = self.model.transcribe(
+            #     audio_data,
+            #     language="en",
+            #     task="transcribe",
+            #     temperature=0.2,
+            #     fp16=torch.cuda.is_available()
+            # )
+            
+            # return result["text"].strip()
+
+            ############################
+            # #Transcription using OpenAI API
+            ############################
+            # Create a temporary WAV file
+            # Add audio preprocessing
+            audio_data = self.preprocess_audio(audio_data)
+            
+            with tempfile.NamedTemporaryFile(suffix='.wav', delete=True) as temp_audio:
+                self.save_audio_chunk(audio_data, temp_audio.name)
+                
+                with open(temp_audio.name, 'rb') as audio_file:
+                    response = self.client.audio.transcriptions.create(
+                        model="whisper-1",
+                        file=audio_file,
+                        language="en",
+                        temperature=0.0,  # Reduced from default for more deterministic output
+                    )
+                    
+                return response.text.strip()
+                
         except Exception as e:
             print(f"\nError in transcription: {e}")
             return ""
+
+    def preprocess_audio(self, audio_data):
+        """Preprocess audio data for better transcription"""
+        # Normalize audio
+        audio_data = audio_data / np.max(np.abs(audio_data))
+        
+        # Apply basic noise reduction
+        noise_floor = np.mean(np.abs(audio_data[:1000]))  # Estimate noise from first 1000 samples
+        audio_data = np.where(np.abs(audio_data) < noise_floor * 2, 0, audio_data)
+        
+        # Apply simple low-pass filter to reduce high-frequency noise
+        b, a = signal.butter(4, 0.8, btype='low')
+        audio_data = signal.filtfilt(b, a, audio_data)
+        
+        return audio_data
 
 async def main():
     audio_handler = AudioHandler()
