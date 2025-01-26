@@ -119,6 +119,10 @@ body {
   border-radius: 2.67vh;
   margin-top: 3.33vh;
   order: 2;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .scenario {

@@ -1,11 +1,10 @@
-"use client";
-import Image from "next/image";
-// import { useRouter } from "next/router";
 import { redirect } from "next/navigation";
+import ChatBot from "./ai/chatbot";
+import { Chat } from "openai/resources/index.mjs";
+import Link from "next/link";
 
 export default function Home() {
   // const router = useRouter();
-  
 
   return (
     <main className="home-screen">
@@ -36,14 +35,11 @@ export default function Home() {
             </div>
           </div>
         </div>
-        <div className="ai">
-          <div className="circle"></div>
-          <p>Hola, como estas?</p>
-        </div>
+        <ChatBot />
       </div>
-      <button className="speak-button" onClick={() => {redirect("/chat")}}>
+      <Link className="speak-button" href="/chat">
         <span className="scenario">Speak Now</span>
-      </button>
+      </Link>
     </main>
   );
 }
