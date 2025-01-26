@@ -1,6 +1,12 @@
+"use client";
 import Image from "next/image";
+// import { useRouter } from "next/router";
+import { redirect } from "next/navigation";
 
 export default function Home() {
+  // const router = useRouter();
+  
+
   return (
     <main className="home-screen">
       {/* Navbar */}
@@ -35,7 +41,7 @@ export default function Home() {
           <p>Hola, como estas?</p>
         </div>
       </div>
-      <button className="speak-button">
+      <button className="speak-button" onClick={() => {redirect("/chat")}}>
         <span className="scenario">Speak Now</span>
       </button>
     </main>
