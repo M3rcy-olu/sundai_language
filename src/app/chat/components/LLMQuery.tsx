@@ -1,30 +1,33 @@
-"use client"
-import { useState } from 'react';
-import { generateResponse } from '../../../api/typescript/OpenAI';
+"use client";
+import { useState } from "react";
+import { generateResponse } from "../../../api/typescript/OpenAI";
 import { NextResponse } from "next/server";
+import Button from "@/app/components/button";
+import Subtext from "@/app/components/subtext";
 
 // TODO: Implement the UI for this component
 // Component that queries the LLM and returns the reponse
- 
 
 export default function LLMQuery() {
-  const [userInput, setUserInput] = useState('');
-  const [response, setResponse] = useState<{ Spanish: string; English: string }[]>([]);
+  const [userInput, setUserInput] = useState("");
+  const [response, setResponse] = useState<
+    { Spanish: string; English: string }[]
+  >([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError('');
-    
+    setError("");
+
     try {
       const result = await generateResponse(userInput);
       setResponse(result.response);
-      setUserInput(''); // Clear input after successful submission
+      setUserInput(""); // Clear input after successful submission
     } catch (error) {
-      console.error('Error in LLM query:', error);
-      setError('Failed to get response. Please try again.');
+      console.error("Error in LLM query:", error);
+      setError("Failed to get response. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -34,29 +37,25 @@ export default function LLMQuery() {
     <div className="max-w-2xl mx-auto p-4">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <textarea
+          {/* <textarea
             value={userInput}
             onChange={(e) => setUserInput(e.target.value)}
             placeholder="Enter your Spanish text here..."
-            className="w-full p-2 border rounded-md min-h-[100px]"
+            className="w-full p-2 border rounded-md min-h-[100px] text-black"
             disabled={isLoading}
+          /> */}
+        </div>
+        <div className="flex justify-center">
+          <Button
+            text={isLoading ? "Stop" : "Speak"}
+            type="submit"
+            disabled={isLoading || !userInput.trim()}
           />
         </div>
-        
-        <button
-          type="submit"
-          disabled={isLoading || !userInput.trim()}
-          className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 disabled:bg-gray-400"
-        >
-          {isLoading ? 'Generating...' : 'Submit'}
-        </button>
       </form>
-
-      {error && (
-        <div className="text-red-500 mt-4">
-          {error}
-        </div>
-      )}
+      <div className="mt-[2vh]">
+        {error && <Subtext text={error} className="text-red-500" />}
+      </div>
 
       {response.length > 0 && (
         <div className="mt-6 space-y-4">
@@ -65,9 +64,7 @@ export default function LLMQuery() {
               <div className="font-semibold text-green-600">
                 Spanish: {item.Spanish}
               </div>
-              <div className="mt-2 text-gray-700">
-                English: {item.English}
-              </div>
+              <div className="mt-2 text-gray-700">English: {item.English}</div>
             </div>
           ))}
         </div>

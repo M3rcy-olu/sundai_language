@@ -1,44 +1,46 @@
 import { redirect } from "next/navigation";
-import ChatBot from "./ai/chatbot";
+import ChatBot from "./components/chatbot";
 import { Chat } from "openai/resources/index.mjs";
 import Link from "next/link";
+import Button from "./components/button";
+import Navbar from "./components/navbar";
+import Subtext from "./components/subtext";
+import Header from "./components/header";
 
 export default function Home() {
   // const router = useRouter();
 
   return (
-    <main className="home-screen">
+    <main className="page-alignment gap-[14vh]">
       {/* Navbar */}
-      <nav className="navbar">
-        <h1 className="logo">Tongue</h1>
-      </nav>
+      <Navbar />
 
       {/* Main Content */}
       <div className="frame-2">
         <div className="frame-1">
-          <div className="headers">
-            <h2 className="title">
-              <span className="gradient">Speak </span>
-              Language. Don't just "Learn".
-            </h2>
+          <h1 className="title">
+            <Header text="Speak " gradient={true} />
+            <Header text="Language. Don't just 'Learn'." />
+          </h1>
 
-            <div className="subtext">
-              <p>
-                With <span className="gradient">Tongue</span>
-                <span>, learning a new "tongue" has never been easier.</span>
-              </p>
-              <br />
-              <p>
-                Learn your new <span className="gradient">Tongue </span>
-                <span>(Spanish) now.</span>
-              </p>
-            </div>
+          <div className="subtext">
+            <p className="w-[25vw]">
+              <Subtext text="With " />{" "}
+              <Subtext text="Tongue" className="gradient" />
+              <Subtext text=", learning a new 'tongue' has never been easier." />
+            </p>
+            <br />
+            <p className="w-[25vw]">
+              <Subtext text="Learn your new " />
+              <Subtext text="Tongue " className="gradient" />
+              <Subtext text="(Spanish) now." />
+            </p>
           </div>
         </div>
         <ChatBot />
       </div>
-      <Link className="speak-button" href="/chat">
-        <span className="scenario">Speak Now</span>
+      <Link href="/chat" className="order-[3]">
+        <Button text="Speak Now" />
       </Link>
     </main>
   );
