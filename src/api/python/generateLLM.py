@@ -2,53 +2,69 @@ from fastapi import APIRouter, HTTPException
 # from src.api.models.generate import GenerateRequest
 import json
 import openai
+from openai import OpenAI
 import os
-# from pydantic import BaseModel
+from pydantic import BaseModel
 
 # Ensure API key is set
 openai.api_key = os.getenv("OPENAI_API_KEY")
 if openai.api_key is None:
     raise ValueError("OpenAI API key not found")
 
+client = OpenAI(
+    api_key=os.environ.get("OPENAI_API_KEY"), 
+)
+
 
 # Initialize the router
 router = APIRouter()
 
-@router.post("/api/generateResponse")
-async def generate_text(request):
-    # System prompt for consistent output formatting
-    system_prompt = """
-    You are a language instructor engaging with a student in a roleplay where you act as a cashier. 
-    The student will attempt to buy a product from you in Spanish. Your role is to respond in Spanish, 
-    correct any mistakes, and provide explanations in English.
+# Add request model
+class GenerateRequest(BaseModel):
+    user_prompt: str
 
-    Your response should include:
-    1. The corrected Spanish sentence, incorporating natural language, including slang if appropriate.
-    2. A clear, detailed explanation of the corrections in English.
-
-    Format your output as JSON with the following structure:
-    {
-        "response": [
-            {
-                "Spanish": "Corrected Spanish sentence here",
-                "English": "Explanation of corrections here"
-            }
-        ]
-    }
-    """ 
-
+@router.post("/generateResponse")
+async def generate_text(request: GenerateRequest):
     try:
-        response = openai.ChatCompletion.create(
-            model="gpt-4",  # Check if this model name is correct for your case
+        # System prompt for consistent output formatting
+        system_prompt = """
+        I am Ella, a language instructor specializing in Spanish. My role is to roleplay scenarios with the student, helping them practice practical conversations in Spanish. In this scenario, I am acting as a food server, and the student will order food.
+
+        I will respond naturally in Spanish, engaging in the roleplay.
+        I will explain any necessary corrections in English, ensuring the student understands and can improve their Spanish.
+
+        Output Format:
+        - All responses must be in JSON format.
+        {
+            "response": [
+                {
+                    "Spanish": "My Spanish response here",
+                    "English": "English analysis of student's response here."
+                }
+            ]
+        }
+        """ 
+        
+        # Debug prints
+        print("1. Received request:", request.user_prompt)
+        print("2. API Key present:", bool(openai.api_key))
+        print("3. API Key value:", openai.api_key[:10] + "..." if openai.api_key else None)
+        
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": request.user_prompt}
             ]
         )
+        print("4. OpenAI Response received", response)
+        
+        
+        parsed_content = json.loads(response.choices[0].message.content)
 
-        # Assuming response.choices[0].message['content'] is the text result
-        story_json = json.loads(response['choices'][0]['message']['content'])  # Parse as JSON if it's in that format
-        return story_json
+        print("5. JSON parsed successfully")
+        return parsed_content
+        
     except Exception as e:
-        # Handle errors and send HTTP 500 response
+        print(f"Error in generate_text: {type(e).__name__}, {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
