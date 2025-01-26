@@ -5,6 +5,7 @@ import ChatBot from "../components/chatbot";
 import Subtext from "../components/subtext";
 import Transcription from "./components/transcription";
 import PageTransition from "../components/PageTransition";
+import LLMToSpeech from "./components/LLMToSpeech";
 
 export default function Chat() {
   return (
@@ -13,7 +14,8 @@ export default function Chat() {
         <Navbar />
         <ChatBot showText={false} />
         <Transcription />
-        <LLMQuery />
+        {/* <LLMQuery /> */}
+        <LLMToSpeech />
       </main>
     </PageTransition>
   );
