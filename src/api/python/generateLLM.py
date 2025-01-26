@@ -14,7 +14,7 @@ if openai.api_key is None:
 # Initialize the router
 router = APIRouter()
 
-@router.post("/api/generate")
+@router.post("/api/generateResponse")
 async def generate_text(request):
     # System prompt for consistent output formatting
     system_prompt = """
