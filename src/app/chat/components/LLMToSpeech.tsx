@@ -1,13 +1,15 @@
-"use client"
-import { useState } from 'react';
-import { generateResponse } from '../../../api/typescript/OpenAI';
-import { generateSpeech } from '../../../api/typescript/elevenlabsTTS';
+"use client";
+import { useState } from "react";
+import { generateResponse } from "../../../api/typescript/OpenAI";
+import { generateSpeech } from "../../../api/typescript/elevenlabsTTS";
 
 export default function LLMToSpeech() {
-  const [userInput, setUserInput] = useState('');
-  const [response, setResponse] = useState<{ Spanish: string; English: string }[]>([]);
+  const [userInput, setUserInput] = useState("");
+  const [response, setResponse] = useState<
+    { Spanish: string; English: string }[]
+  >([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const playAudio = async (audioData: ArrayBuffer) => {
     const audioContext = new AudioContext();
@@ -21,8 +23,8 @@ export default function LLMToSpeech() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError('');
-    
+    setError("");
+
     try {
       // First, get the LLM response
       const llmResult = await generateResponse(userInput);
@@ -31,15 +33,15 @@ export default function LLMToSpeech() {
       // Then, generate and play speech from the Spanish response
       if (llmResult.response && llmResult.response[0]?.Spanish) {
         const audioData = await generateSpeech({
-          text: llmResult.response[0].Spanish
+          text: llmResult.response[0].Spanish,
         });
         await playAudio(audioData);
       }
 
-      setUserInput(''); // Clear input after successful submission
+      setUserInput(""); // Clear input after successful submission
     } catch (error) {
-      console.error('Error in LLM to Speech:', error);
-      setError('Failed to process request. Please try again.');
+      console.error("Error in LLM to Speech:", error);
+      setError("Failed to process request. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -53,25 +55,21 @@ export default function LLMToSpeech() {
             value={userInput}
             onChange={(e) => setUserInput(e.target.value)}
             placeholder="Enter your Spanish text here..."
-            className="w-full p-2 border rounded-md min-h-[100px]"
+            className="w-full p-2 border rounded-md min-h-[100px] text-black"
             disabled={isLoading}
           />
         </div>
-        
+
         <button
           type="submit"
           disabled={isLoading || !userInput.trim()}
           className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 disabled:bg-gray-400"
         >
-          {isLoading ? 'Processing...' : 'Submit and Speak'}
+          {isLoading ? "Processing..." : "Submit and Speak"}
         </button>
       </form>
 
-      {error && (
-        <div className="text-red-500 mt-4">
-          {error}
-        </div>
-      )}
+      {error && <div className="text-red-500 mt-4">{error}</div>}
 
       {response.length > 0 && (
         <div className="mt-6 space-y-4">
@@ -82,11 +80,13 @@ export default function LLMToSpeech() {
                 <button
                   onClick={async () => {
                     try {
-                      const audioData = await generateSpeech({ text: item.Spanish });
+                      const audioData = await generateSpeech({
+                        text: item.Spanish,
+                      });
                       await playAudio(audioData);
                     } catch (error) {
-                      console.error('Error playing audio:', error);
-                      setError('Failed to play audio. Please try again.');
+                      console.error("Error playing audio:", error);
+                      setError("Failed to play audio. Please try again.");
                     }
                   }}
                   className="ml-2 px-2 py-1 bg-green-500 text-white rounded-md hover:bg-green-600"
@@ -94,9 +94,7 @@ export default function LLMToSpeech() {
                   🔊 Play
                 </button>
               </div>
-              <div className="mt-2 text-gray-700">
-                English: {item.English}
-              </div>
+              <div className="mt-2 text-gray-700">English: {item.English}</div>
             </div>
           ))}
         </div>
