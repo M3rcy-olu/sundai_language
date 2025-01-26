@@ -57,7 +57,7 @@ async def generate_text(request: GenerateRequest):
                 {"role": "user", "content": request.user_prompt}
             ]
         )
-        print("4. OpenAI Response received", response)
+        print("4. OpenAI Response received")
         
         
         parsed_content = json.loads(response.choices[0].message.content)
