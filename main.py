@@ -3,7 +3,7 @@ import os
 
 print("Current working directory:", os.getcwd())
 print("Environment variables before load:", bool(os.getenv("OPENAI_API_KEY")))
-load_dotenv()
+load_dotenv()  # Explicitly specify the .env.local file
 print("Environment variables after load:", bool(os.getenv("OPENAI_API_KEY")))
 
 from fastapi import FastAPI
@@ -32,4 +32,4 @@ async def test():
         "status": "ok",
         "api_key_present": bool(os.getenv("OPENAI_API_KEY")),
         "current_dir": os.getcwd()
-    } 
+    }
