@@ -1,20 +1,15 @@
 from fastapi import APIRouter, HTTPException
-# from src.api.models.generate import GenerateRequest
 import json
-import openai
 from openai import OpenAI
 import os
 from pydantic import BaseModel
 
-# Ensure API key is set
-openai.api_key = os.getenv("OPENAI_API_KEY")
-if openai.api_key is None:
+# Initialize the OpenAI client
+api_key = os.getenv("OPENAI_API_KEY")
+if api_key is None:
     raise ValueError("OpenAI API key not found")
 
-client = OpenAI(
-    api_key=os.environ.get("OPENAI_API_KEY"), 
-)
-
+client = OpenAI(api_key=api_key)
 
 # Initialize the router
 router = APIRouter()
@@ -47,8 +42,8 @@ async def generate_text(request: GenerateRequest):
         
         # Debug prints
         print("1. Received request:", request.user_prompt)
-        print("2. API Key present:", bool(openai.api_key))
-        print("3. API Key value:", openai.api_key[:10] + "..." if openai.api_key else None)
+        print("2. API Key present:", bool(api_key))
+        print("3. API Key value:", api_key[:10] + "..." if api_key else None)
         
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
