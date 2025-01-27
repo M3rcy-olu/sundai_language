@@ -1,7 +1,7 @@
-"use client"
-import { useState, useEffect} from 'react';
-import { generateResponse } from '../../../api/typescript/OpenAI';
-import { generateSpeech } from '../../../api/typescript/elevenlabsTTS';
+"use client";
+import { useState, useEffect } from "react";
+import { generateResponse } from "../../../api/typescript/OpenAI";
+import { generateSpeech } from "../../../api/typescript/elevenlabsTTS";
 import Transcription from "./transcription";
 import Button from "@/app/components/button";
 import TextTransition from "./TextTransition";
@@ -11,26 +11,33 @@ interface LLMToSpeechProps {
   initialInput?: string;
 }
 export default function LLMToSpeech({ initialInput }: LLMToSpeechProps) {
-  const [userInput, setUserInput] = useState('');
-  const [response, setResponse] = useState<{
-    Student_Spanish: string;
-    Spanish_Response: string;
-    English_Analysis: string;
-  }[]>([]);
+  const [userInput, setUserInput] = useState("");
+  const [voiceTranscript, setVoiceTranscript] = useState("");
+
+  const handleVoiceTranscript = (transcript: string) => {
+    setVoiceTranscript(transcript);
+  };
+  const [response, setResponse] = useState<
+    {
+      Student_Spanish: string;
+      Spanish_Response: string;
+      English_Analysis: string;
+    }[]
+  >([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  
+  const [error, setError] = useState("");
+
   useEffect(() => {
     if (initialInput) {
-      console.log('Received initialInput:', initialInput);
+      console.log("Received initialInput:", initialInput);
       setUserInput(initialInput);
     }
   }, [initialInput]);
 
   useEffect(() => {
     if (userInput) {
-      console.log('Submitting userInput:', userInput);
-      handleSubmit(new Event('submit') as any);
+      console.log("Submitting userInput:", userInput);
+      handleSubmit(new Event("submit") as any);
     }
   }, [userInput]);
 
@@ -90,24 +97,6 @@ export default function LLMToSpeech({ initialInput }: LLMToSpeechProps) {
           ))}
         </div>
       )}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <textarea
-            value={userInput}
-            onChange={(e) => setUserInput(e.target.value)}
-            placeholder="Enter your Spanish text here..."
-            className="w-full p-2 border rounded-md min-h-[100px] text-black"
-            disabled={isLoading}
-          />
-        </div>
-        <div className="flex justify-center">
-          <Button
-            text={isLoading ? "Stop" : "Speak"}
-            type="submit"
-            disabled={isLoading || !userInput.trim()}
-          />
-        </div>
-      </form>
 
       {error && <div className="text-red-500 mt-4">{error}</div>}
     </div>
