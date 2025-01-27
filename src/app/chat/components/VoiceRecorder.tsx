@@ -22,11 +22,39 @@ const VoiceRecorder = ({ onTranscriptComplete }: VoiceRecorderProps) => {
   const CHUNKS_TO_BUFFER = 8; // Buffer 8 chunks before sending (about 1 second of audio)
 
   useEffect(() => {
+    // Initialize audio context and get permissions early
+    const initAudio = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          audio: {
+            sampleRate: 16000,
+            channelCount: 1
+          } 
+        });
+        streamRef.current = stream;
+        stream.getTracks().forEach(track => track.stop()); // Stop initial stream
+        
+        const audioContext = new AudioContext({
+          sampleRate: 16000
+        });
+        audioContextRef.current = audioContext;
+        audioContext.suspend(); // Suspend until needed
+      } catch (error) {
+        console.error('Error initializing audio:', error);
+      }
+    };
+    
+    initAudio();
+    
     // Cleanup function
     return () => {
       if (websocketRef.current) {
         websocketRef.current.close();
         websocketRef.current = null;
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+        audioContextRef.current = null;
       }
     };
   }, []);
@@ -36,6 +64,7 @@ const VoiceRecorder = ({ onTranscriptComplete }: VoiceRecorderProps) => {
     setIsProcessing(false);
     setProcessingStatus('');
     try {
+      // Get new stream
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
           sampleRate: 16000,
@@ -44,19 +73,22 @@ const VoiceRecorder = ({ onTranscriptComplete }: VoiceRecorderProps) => {
       });
       streamRef.current = stream;
       
-      const audioContext = new AudioContext({
-        sampleRate: 16000
-      });
-      audioContextRef.current = audioContext;
+      // Resume existing audio context or create new one if needed
+      if (!audioContextRef.current) {
+        audioContextRef.current = new AudioContext({
+          sampleRate: 16000
+        });
+      }
+      await audioContextRef.current.resume();
       
-      const source = audioContext.createMediaStreamSource(stream);
+      const source = audioContextRef.current.createMediaStreamSource(stream);
       sourceRef.current = source;
       
-      const processor = audioContext.createScriptProcessor(2048, 1, 1);
+      const processor = audioContextRef.current.createScriptProcessor(2048, 1, 1);
       processorRef.current = processor;
 
       source.connect(processor);
-      processor.connect(audioContext.destination);
+      processor.connect(audioContextRef.current.destination);
 
       // Connect to WebSocket
       const ws = new WebSocket('ws://localhost:8000/api/speech/ws/speech');
