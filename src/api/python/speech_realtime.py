@@ -49,7 +49,7 @@ class AudioHandler:
         self.p = pyaudio.PyAudio()
         self.buffer = []
         self.BUFFER_SECONDS = 4.0  # Increased from 3.0 for better context
-        self.SILENCE_THRESHOLD = 0.09  # Adjusted for better speech detection
+        self.SILENCE_THRESHOLD = 0.02  # Adjusted for better speech detection
         
         print("\nAvailable Audio Devices:")
         for i in range(self.p.get_device_count()):
@@ -114,26 +114,42 @@ class AudioHandler:
         try:
             logger.info(f"Starting transcription: input shape={audio_data.shape}, max amplitude={np.max(np.abs(audio_data)):.4f}")
             
-            # Add audio preprocessing
-            audio_data = self.preprocess_audio(audio_data)
-            logger.info(f"After preprocessing: shape={audio_data.shape}, max amplitude={np.max(np.abs(audio_data)):.4f}")
+            # Skip preprocessing if audio level is too low
+            if np.max(np.abs(audio_data)) < self.SILENCE_THRESHOLD:
+                logger.info("Audio level too low, skipping transcription")
+                return ""
             
-            with tempfile.NamedTemporaryFile(suffix='.wav', delete=True) as temp_audio:
-                self.save_audio_chunk(audio_data, temp_audio.name)
-                logger.info(f"Temp file size: {os.path.getsize(temp_audio.name)} bytes")
-                
-                with open(temp_audio.name, 'rb') as audio_file:
-                    logger.info("Sending request to OpenAI Whisper API")
-                    response = self.client.audio.transcriptions.create(
-                        model="whisper-1",
-                        file=audio_file,
-                        language="en",
-                        temperature=0.0,  # Reduced from default for more deterministic output
-                    )
-                    
-                transcript = response.text.strip()
-                logger.info(f"Received transcript: '{transcript}'")
-                return transcript
+            # Quick normalization only if needed
+            max_amplitude = np.max(np.abs(audio_data))
+            if max_amplitude > 1.0:
+                audio_data = audio_data / max_amplitude
+            
+            # Convert to 16-bit PCM
+            audio_data_int = (audio_data * 32767).astype(np.int16)
+            
+            # Create WAV file in memory
+            import io
+            wav_buffer = io.BytesIO()
+            with wave.open(wav_buffer, 'wb') as wf:
+                wf.setnchannels(self.CHANNELS)
+                wf.setsampwidth(2)  # 2 bytes for int16
+                wf.setframerate(self.RATE)
+                wf.writeframes(audio_data_int.tobytes())
+            
+            # Reset buffer position
+            wav_buffer.seek(0)
+            
+            logger.info("Sending request to OpenAI Whisper API")
+            response = self.client.audio.transcriptions.create(
+                model="whisper-1",
+                file=('audio.wav', wav_buffer, 'audio/wav'),
+                language="en",
+                temperature=0.0,
+            )
+            
+            transcript = response.text.strip()
+            logger.info(f"Received transcript: '{transcript}'")
+            return transcript
                 
         except Exception as e:
             logger.error(f"Error in transcription: {e}")

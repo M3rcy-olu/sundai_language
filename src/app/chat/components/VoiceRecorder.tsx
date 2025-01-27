@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 interface VoiceRecorderProps {
   onTranscriptComplete: (transcript: string) => void;
@@ -8,6 +8,8 @@ interface VoiceRecorderProps {
 
 const VoiceRecorder = ({ onTranscriptComplete }: VoiceRecorderProps) => {
   const [isRecording, setIsRecording] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingStatus, setProcessingStatus] = useState('');
   const [transcript, setTranscript] = useState('');
   const streamRef = useRef<MediaStream | null>(null);
   const websocketRef = useRef<WebSocket | null>(null);
@@ -15,12 +17,24 @@ const VoiceRecorder = ({ onTranscriptComplete }: VoiceRecorderProps) => {
   const processorRef = useRef<ScriptProcessorNode | null>(null);
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   
-  // Add buffer for audio chunks
+  // Store all audio chunks during recording
   const audioBufferRef = useRef<Float32Array[]>([]);
   const CHUNKS_TO_BUFFER = 8; // Buffer 8 chunks before sending (about 1 second of audio)
 
+  useEffect(() => {
+    // Cleanup function
+    return () => {
+      if (websocketRef.current) {
+        websocketRef.current.close();
+        websocketRef.current = null;
+      }
+    };
+  }, []);
+
   const startRecording = async () => {
     setTranscript('');
+    setIsProcessing(false);
+    setProcessingStatus('');
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
@@ -58,8 +72,11 @@ const VoiceRecorder = ({ onTranscriptComplete }: VoiceRecorderProps) => {
         const data = JSON.parse(event.data);
         console.log('Received message:', data);
         if (data.status === 'success' && data.transcript) {
-          console.log('Adding transcript:', data.transcript);
-          setTranscript(prev => prev + ' ' + data.transcript);
+          console.log('Setting transcript:', data.transcript);
+          setTranscript(data.transcript);
+          setIsProcessing(false);
+          // Send transcript to parent component immediately
+          onTranscriptComplete(data.transcript);
         }
       };
 
@@ -75,42 +92,15 @@ const VoiceRecorder = ({ onTranscriptComplete }: VoiceRecorderProps) => {
 
       // Handle audio processing
       processor.onaudioprocess = (e) => {
-        if (ws.readyState === WebSocket.OPEN) {
-          const inputData = e.inputBuffer.getChannelData(0);
-          const audioData = new Float32Array(inputData);
-          
-          // Add chunk to buffer
-          audioBufferRef.current.push(audioData);
-          
-          // Log audio stats
-          const maxAmplitude = Math.max(...Array.from(audioData).map(Math.abs));
-          console.log(`Audio chunk stats: length=${audioData.length}, max amplitude=${maxAmplitude.toFixed(4)}`);
-          
-          // If we have enough chunks, send them
-          if (audioBufferRef.current.length >= CHUNKS_TO_BUFFER) {
-            // Combine all chunks
-            const combinedLength = audioBufferRef.current.reduce((sum, chunk) => sum + chunk.length, 0);
-            const combinedAudio = new Float32Array(combinedLength);
-            let offset = 0;
-            
-            audioBufferRef.current.forEach(chunk => {
-              combinedAudio.set(chunk, offset);
-              offset += chunk.length;
-            });
-            
-            // Convert combined audio to base64
-            const bytes = new Uint8Array(combinedAudio.buffer);
-            const base64Audio = btoa(String.fromCharCode.apply(null, Array.from(bytes)));
-            
-            // Send to WebSocket
-            ws.send(JSON.stringify({ audio: base64Audio }));
-            
-            // Clear buffer
-            audioBufferRef.current = [];
-            
-            console.log(`Sent combined audio: length=${combinedLength}, chunks=${CHUNKS_TO_BUFFER}`);
-          }
-        }
+        const inputData = e.inputBuffer.getChannelData(0);
+        const audioData = new Float32Array(inputData);
+        
+        // Add chunk to buffer
+        audioBufferRef.current.push(audioData);
+        
+        // Log audio stats
+        const maxAmplitude = Math.max(...Array.from(audioData).map(Math.abs));
+        console.log(`Audio chunk stats: length=${audioData.length}, max amplitude=${maxAmplitude.toFixed(4)}`);
       };
 
       setIsRecording(true);
@@ -119,67 +109,160 @@ const VoiceRecorder = ({ onTranscriptComplete }: VoiceRecorderProps) => {
     }
   };
 
-  const stopRecording = () => {
+  const stopRecording = async () => {
     console.log('Stopping recording...');
+    setIsProcessing(true);
+    setProcessingStatus('Preparing audio data...');
     
-    // Send any remaining buffered audio
+    // Clean up audio processing first
+    try {
+      if (processorRef.current && sourceRef.current && audioContextRef.current) {
+        processorRef.current.disconnect();
+        sourceRef.current.disconnect();
+        await audioContextRef.current.close();
+        processorRef.current = null;
+        sourceRef.current = null;
+        audioContextRef.current = null;
+      }
+
+      // Stop all audio tracks
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+    } catch (error) {
+      console.error('Error cleaning up audio:', error);
+    }
+
+    setIsRecording(false);
+    
+    // Send all accumulated audio
     if (websocketRef.current && audioBufferRef.current.length > 0) {
-      const combinedLength = audioBufferRef.current.reduce((sum, chunk) => sum + chunk.length, 0);
-      const combinedAudio = new Float32Array(combinedLength);
-      let offset = 0;
-      
-      audioBufferRef.current.forEach(chunk => {
-        combinedAudio.set(chunk, offset);
-        offset += chunk.length;
-      });
-      
-      const bytes = new Uint8Array(combinedAudio.buffer);
-      const base64Audio = btoa(String.fromCharCode.apply(null, Array.from(bytes)));
-      
-      websocketRef.current.send(JSON.stringify({ audio: base64Audio }));
-      console.log(`Sent final combined audio: length=${combinedLength}, chunks=${audioBufferRef.current.length}`);
+      try {
+        // Combine chunks in smaller batches to prevent memory issues
+        const BATCH_SIZE = 100; // Process 100 chunks at a time
+        const totalChunks = audioBufferRef.current.length;
+        const processedChunks: Float32Array[] = [];
+        
+        for (let i = 0; i < totalChunks; i += BATCH_SIZE) {
+          setProcessingStatus(`Processing audio batch ${Math.min(i + BATCH_SIZE, totalChunks)}/${totalChunks}...`);
+          const batchChunks = audioBufferRef.current.slice(i, i + BATCH_SIZE);
+          const batchLength = batchChunks.reduce((sum, chunk) => sum + chunk.length, 0);
+          const batchAudio = new Float32Array(batchLength);
+          
+          let offset = 0;
+          batchChunks.forEach(chunk => {
+            batchAudio.set(chunk, offset);
+            offset += chunk.length;
+          });
+          
+          processedChunks.push(batchAudio);
+          // Small delay to allow UI updates
+          await new Promise(resolve => setTimeout(resolve, 0));
+        }
+        
+        setProcessingStatus('Combining audio data...');
+        const totalLength = processedChunks.reduce((sum, chunk) => sum + chunk.length, 0);
+        const combinedAudio = new Float32Array(totalLength);
+        let offset = 0;
+        
+        processedChunks.forEach(chunk => {
+          combinedAudio.set(chunk, offset);
+          offset += chunk.length;
+        });
+        
+        setProcessingStatus('Converting to base64...');
+        const bytes = new Uint8Array(combinedAudio.buffer);
+        
+        // Convert to base64 using Blob and FileReader
+        const blob = new Blob([bytes], { type: 'application/octet-stream' });
+        const base64Audio = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = reader.result as string;
+            // Remove the data URL prefix
+            const base64 = result.split(',')[1];
+            resolve(base64);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        
+        // Send complete audio for processing
+        if (websocketRef.current?.readyState === WebSocket.OPEN) {
+          setProcessingStatus('Sending audio for transcription...');
+          
+          // Wait for transcription response
+          const transcriptionComplete = new Promise<void>((resolve, reject) => {
+            const messageHandler = (event: MessageEvent) => {
+              try {
+                const response = JSON.parse(event.data);
+                if (response.status === 'success' && response.transcript) {
+                  setTranscript(response.transcript);
+                  resolve();
+                } else if (response.status === 'error') {
+                  reject(new Error(response.message || 'Transcription failed'));
+                }
+              } catch (error) {
+                console.error('Error parsing WebSocket message:', error);
+              }
+            };
+            
+            const closeHandler = () => {
+              websocketRef.current?.removeEventListener('message', messageHandler);
+              websocketRef.current?.removeEventListener('close', closeHandler);
+              reject(new Error('WebSocket closed before receiving transcription'));
+            };
+            
+            websocketRef.current?.addEventListener('message', messageHandler);
+            websocketRef.current?.addEventListener('close', closeHandler);
+            
+            // Remove the event listeners after 30 seconds (timeout)
+            setTimeout(() => {
+              websocketRef.current?.removeEventListener('message', messageHandler);
+              websocketRef.current?.removeEventListener('close', closeHandler);
+              reject(new Error('Transcription timeout'));
+            }, 30000);
+          });
+          
+          // Send the audio data
+          websocketRef.current.send(JSON.stringify({ 
+            audio: base64Audio,
+            complete: true
+          }));
+          console.log(`Sent complete audio: length=${totalLength}, chunks=${totalChunks}`);
+          
+          try {
+            await transcriptionComplete;
+            setProcessingStatus('Transcription complete');
+          } catch (error) {
+            console.error('Transcription error:', error);
+            setProcessingStatus('Transcription failed: ' + error.message);
+          } finally {
+            // Close WebSocket after transcription attempt (success or failure)
+            if (websocketRef.current?.readyState === WebSocket.OPEN) {
+              console.log('Closing WebSocket connection...');
+              websocketRef.current.close(1000, 'Transcription complete');
+              websocketRef.current = null;
+            }
+          }
+        } else {
+          console.error('WebSocket is not open');
+          setProcessingStatus('Error: WebSocket connection lost');
+        }
+      } catch (error) {
+        console.error('Error processing audio:', error);
+        setProcessingStatus('Error processing audio');
+      }
+    } else {
+      console.log('No audio to process');
+      setProcessingStatus('No audio to process');
     }
     
     // Clear the buffer
     audioBufferRef.current = [];
-
-    // Print final transcript to terminal
-    const finalTranscript = transcript.trim();
-    console.log('\nFinal Transcript:', finalTranscript);
-    
-    // Send final transcript to parent component
-    if (finalTranscript) {
-      onTranscriptComplete(finalTranscript);
-      console.log('Transcript sent to parent component:', finalTranscript);
-    }
-
-    // Stop the WebSocket first to prevent any more data being sent
-    if (websocketRef.current) {
-      console.log('Closing WebSocket connection...');
-      websocketRef.current.close(1000, 'User stopped recording');
-      websocketRef.current = null;
-    }
-
-    // Clean up audio processing
-    if (processorRef.current && sourceRef.current && audioContextRef.current) {
-      processorRef.current.disconnect();
-      sourceRef.current.disconnect();
-      audioContextRef.current.close();
-      processorRef.current = null;
-      sourceRef.current = null;
-      audioContextRef.current = null;
-    }
-
-    // Stop all audio tracks
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-
-    setIsRecording(false);
+    setIsProcessing(false);
   };
-
-  // Clean up on component unmount
 
   return (
     <div className="p-4 bg-white rounded-lg shadow-md">
@@ -187,9 +270,9 @@ const VoiceRecorder = ({ onTranscriptComplete }: VoiceRecorderProps) => {
         <div className="flex gap-4">
           <button
             onClick={startRecording}
-            disabled={isRecording}
+            disabled={isRecording || isProcessing}
             className={`px-4 py-2 rounded-full ${
-              isRecording
+              isRecording || isProcessing
                 ? 'bg-gray-300 cursor-not-allowed'
                 : 'bg-blue-500 hover:bg-blue-600 text-white'
             }`}
@@ -198,21 +281,26 @@ const VoiceRecorder = ({ onTranscriptComplete }: VoiceRecorderProps) => {
           </button>
           <button
             onClick={stopRecording}
-            disabled={!isRecording}
+            disabled={!isRecording || isProcessing}
             className={`px-4 py-2 rounded-full ${
-              !isRecording
+              !isRecording || isProcessing
                 ? 'bg-gray-300 cursor-not-allowed'
                 : 'bg-red-500 hover:bg-red-600 text-white'
             }`}
           >
-            Stop Recording
+            {isProcessing ? 'Processing...' : 'Stop Recording'}
           </button>
         </div>
         
         <div className="w-full">
+          {processingStatus && (
+            <div className="mb-2 text-sm text-gray-600">
+              {processingStatus}
+            </div>
+          )}
           <p className="font-semibold mb-2">Transcript:</p>
           <div className="p-3 bg-gray-50 rounded-lg min-h-[100px] max-h-[200px] overflow-y-auto">
-            {transcript || 'No transcript yet...'}
+            {isProcessing ? 'Processing audio...' : (transcript || 'No transcript yet...')}
           </div>
         </div>
       </div>
