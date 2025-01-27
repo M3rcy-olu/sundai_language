@@ -10,6 +10,7 @@ interface TTSRequest {
 
 export const generateSpeech = async (params: TTSRequest) => {
   try {
+    console.log("wtfwtfwtfwtwftfwf generate speech")
     console.log('Sending request to:', `${API_BASE_URL}/api/text-to-speech`);
     const response = await axios.post(`${API_BASE_URL}/api/text-to-speech`, params, {
       headers: {

@@ -5,7 +5,11 @@ import { generateSpeech } from '../../../api/typescript/elevenlabsTTS';
 
 export default function LLMToSpeech() {
   const [userInput, setUserInput] = useState('');
-  const [response, setResponse] = useState<{ Spanish: string; English: string }[]>([]);
+  const [response, setResponse] = useState<{
+    Student_Spanish: string;
+    Spanish_Response: string;
+    English_Analysis: string;
+  }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -29,9 +33,9 @@ export default function LLMToSpeech() {
       setResponse(llmResult.response);
 
       // Then, generate and play speech from the Spanish response
-      if (llmResult.response && llmResult.response[0]?.Spanish) {
+      if (llmResult.response && llmResult.response[0]?.Spanish_Response) {
         const audioData = await generateSpeech({
-          text: llmResult.response[0].Spanish
+          text: llmResult.response[0].Spanish_Response
         });
         await playAudio(audioData);
       }
@@ -74,12 +78,12 @@ export default function LLMToSpeech() {
           {response.map((item, index) => (
             <div key={index} className="border rounded-md p-4">
               <div className="font-semibold text-green-600">
-                Spanish: {item.Spanish}
+                Spanish: {item.Spanish_Response}
                 <button
                   onClick={async () => {
                     try {
                       const audioData = await generateSpeech({
-                        text: item.Spanish,
+                        text: item.Spanish_Response,
                       });
                       await playAudio(audioData);
                     } catch (error) {
@@ -92,7 +96,7 @@ export default function LLMToSpeech() {
                   🔊 Play
                 </button>
               </div>
-              <div className="mt-2 text-gray-700">English: {item.English}</div>
+              <div className="mt-2 text-gray-700">English: {item.English_Analysis}</div>
             </div>
           ))}
         </div>

@@ -11,11 +11,12 @@ export default function Chat() {
   return (
     <PageTransition>
       <main className="page-alignment gap-[10vh]">
+        <LLMToSpeech />
         <Navbar />
         <ChatBot showText={false} />
         <Transcription />
         {/* <LLMQuery /> */}
-        <LLMToSpeech />
+       
       </main>
     </PageTransition>
   );
