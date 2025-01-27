@@ -1,17 +1,23 @@
-import React from 'react'
-import LLMQuery from './components/LLMQuery'
-import VoiceRecorder from './components/VoiceRecorder'
+import React from "react";
+import LLMQuery from "./components/LLMQuery";
+import Navbar from "../components/navbar";
+import ChatBot from "../components/chatbot";
+import Subtext from "../components/subtext";
+import Transcription from "./components/transcription";
+import PageTransition from "../components/PageTransition";
+import LLMToSpeech from "./components/LLMToSpeech";
 
-const page = () => {
+export default function Chat() {
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Chat Interface</h1>
-      <div className="grid gap-6">
-        <VoiceRecorder />
-        <LLMQuery />
-      </div>
-    </div>
-  )
+    <PageTransition>
+      <main className="page-alignment gap-[10vh]">
+        <LLMToSpeech />
+        <Navbar />
+        <ChatBot showText={false} />
+        <Transcription />
+        {/* <LLMQuery /> */}
+       
+      </main>
+    </PageTransition>
+  );
 }
-
-export default page

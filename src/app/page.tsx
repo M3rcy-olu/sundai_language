@@ -1,49 +1,49 @@
-"use client";
-import Image from "next/image";
-// import { useRouter } from "next/router";
 import { redirect } from "next/navigation";
+import ChatBot from "./components/chatbot";
+import { Chat } from "openai/resources/index.mjs";
+import Link from "next/link";
+import Button from "./components/button";
+import Navbar from "./components/navbar";
+import Subtext from "./components/subtext";
+import Header from "./components/header";
+import PageTransition from "./components/PageTransition";
 
 export default function Home() {
   // const router = useRouter();
-  
 
   return (
-    <main className="home-screen">
+    <main className="page-alignment gap-[14vh]">
       {/* Navbar */}
-      <nav className="navbar">
-        <h1 className="logo">Tongue</h1>
-      </nav>
-
-      {/* Main Content */}
-      <div className="frame-2">
-        <div className="frame-1">
-          <div className="headers">
-            <h2 className="title">
-              <span className="gradient">Speak </span>
-              Language. Don't just "Learn".
-            </h2>
+      <Navbar />
+      <PageTransition>
+        {/* Main Content */}
+        <div className="frame-2">
+          <div className="frame-1">
+            <h1 className="title">
+              <Header text="Speak " gradient={true} />
+              <Header text="Language. Don't just 'Learn'." />
+            </h1>
 
             <div className="subtext">
-              <p>
-                With <span className="gradient">Tongue</span>
-                <span>, learning a new "tongue" has never been easier.</span>
+              <p className="w-[25vw]">
+                <Subtext text="With " />{" "}
+                <Subtext text="Tongue" className="gradient" />
+                <Subtext text=", learning a new 'tongue' has never been easier." />
               </p>
               <br />
-              <p>
-                Learn your new <span className="gradient">Tongue </span>
-                <span>(Spanish) now.</span>
+              <p className="w-[25vw]">
+                <Subtext text="Learn your new " />
+                <Subtext text="Tongue " className="gradient" />
+                <Subtext text="(Spanish) now." />
               </p>
             </div>
           </div>
+          <ChatBot showText={true} />
         </div>
-        <div className="ai">
-          <div className="circle"></div>
-          <p>Hola, como estas?</p>
-        </div>
-      </div>
-      <button className="speak-button" onClick={() => {redirect("/chat")}}>
-        <span className="scenario">Speak Now</span>
-      </button>
+        <Link href="/chat" className="order-[3]">
+          <Button text="Speak Now" />
+        </Link>
+      </PageTransition>
     </main>
   );
 }

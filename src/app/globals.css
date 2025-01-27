@@ -12,31 +12,41 @@
     --foreground: #ededed;
   }
 }
-
+@keyframes gradientAnimation {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 75%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
 body {
   margin: 0;
   padding: 0;
   color: var(--foreground);
-  background: var(--background);
   font-family: "DM Sans", sans-serif;
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(-45deg, #2f3336, #151518, #373a3d, #211e25);
+  background-size: 400% 400%;
+  animation: gradientAnimation 30s ease infinite;
   overflow: hidden;
 }
 
-.home-screen {
+.page-alignment {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 0;
-  gap: 7vh; /* 149/1200 */
+  /* gap: 7vh; 149/1200 */
   position: relative;
-  width: 100vw;
-  height: 100vh;
-  background: linear-gradient(132.2deg, #2f3336 18.4%, #151518 76.27%);
 }
 
 .navbar {
   width: 100vw;
-  height: 20.42vh; /* 245/1200 */
+  height: 10.42vh; /* 245/1200 */
   flex: none;
   order: 0;
   align-self: stretch;
@@ -92,13 +102,12 @@ body {
 }
 
 .gradient {
-  /* Speak Language. Don’t just “Learn”. */
+  /* Speak Language. Don't just "Learn". */
 
   background: linear-gradient(106.79deg, #b3a8da 20%, #3a344f 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  text-fill-color: transparent;
 }
 
 .subtext {
@@ -109,7 +118,6 @@ body {
   line-height: 2.42vh; /* 29/1200 */
   color: #c7c4d2;
   margin-top: 1.67vh; /* 20/1200 */
-  width: 25vw;
 }
 
 .speak-button {
@@ -119,6 +127,19 @@ body {
   border-radius: 2.67vh;
   margin-top: 3.33vh;
   order: 2;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: background-color 0.2s ease;
+}
+
+.speak-button:hover {
+  background-color: #a19dad;
+}
+
+.speak-button:disabled {
+  background-color: #4e4d52;
 }
 
 .scenario {

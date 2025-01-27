@@ -9,7 +9,9 @@ print("Environment variables after load:", bool(os.getenv("OPENAI_API_KEY")))
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.api.python.generateLLM import router as generateLLM_router
+from src.api.python.elevenlabsTTS import router as elevenlabsTTS_router
 from src.api.python.speech_router import router as speech_router
+
 
 app = FastAPI()
 
@@ -22,6 +24,7 @@ app.add_middleware(
 )
 
 app.include_router(generateLLM_router, prefix="/api")
+app.include_router(elevenlabsTTS_router, prefix="/api")
 app.include_router(speech_router, prefix="/api/speech")
 
 @app.get("/")
