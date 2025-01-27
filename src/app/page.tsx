@@ -12,10 +12,10 @@ export default function Home() {
   // const router = useRouter();
 
   return (
-    <main className="page-alignment gap-[14vh]">
-      {/* Navbar */}
-      <Navbar />
-      <PageTransition>
+    <PageTransition>
+      <main className="page-alignment gap-[14vh]">
+        {/* Navbar */}
+        <Navbar />
         {/* Main Content */}
         <div className="frame-2">
           <div className="frame-1">
@@ -43,7 +43,7 @@ export default function Home() {
         <Link href="/chat" className="order-[3]">
           <Button text="Speak Now" />
         </Link>
-      </PageTransition>
-    </main>
+      </main>
+    </PageTransition>
   );
 }
