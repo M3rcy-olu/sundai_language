@@ -19,8 +19,8 @@ export default function LLMToSpeech({ initialInput }: LLMToSpeechProps) {
   const [generatedScenario, setGeneratedScenario] = useState("");
   const [response, setResponse] = useState<
     {
-      Student_Spanish: string;
-      Spanish_Response: string;
+      Student_french: string;
+      french_Response: string;
       English_Analysis: string;
     }[]
   >([]);
@@ -83,9 +83,9 @@ export default function LLMToSpeech({ initialInput }: LLMToSpeechProps) {
       setResponse(llmResult.response);
 
       // Generate and play speech
-      if (llmResult.response && llmResult.response[0]?.Spanish_Response) {
+      if (llmResult.response && llmResult.response[0]?.french_Response) {
         const audioData = await generateSpeech({
-          text: llmResult.response[0].Spanish_Response,
+          text: llmResult.response[0].french_Response,
         });
         await playAudio(audioData);
       }
@@ -107,10 +107,10 @@ export default function LLMToSpeech({ initialInput }: LLMToSpeechProps) {
             <div key={index}>
               <AnimatePresence mode="wait">
                 <TextTransition
-                  key={item.Spanish_Response || item.English_Analysis}
+                  key={item.french_Response || item.English_Analysis}
                 >
                   <Transcription
-                    subtitles={item.Spanish_Response}
+                    subtitles={item.french_Response}
                     feedback={item.English_Analysis}
                   />
                 </TextTransition>

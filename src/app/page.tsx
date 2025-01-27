@@ -34,7 +34,7 @@ export default function Home() {
               <p className="w-[25vw]">
                 <Subtext text="Learn your new " />
                 <Subtext text="Tongue " className="gradient" />
-                <Subtext text="(Spanish) now." />
+                <Subtext text="(french) now." />
               </p>
             </div>
           </div>

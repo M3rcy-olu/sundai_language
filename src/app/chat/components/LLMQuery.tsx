@@ -13,8 +13,8 @@ export default function LLMQuery({ initialInput = "" }: LLMQueryProps) {
   const [userInput, setUserInput] = useState("");
   const [response, setResponse] = useState<
     {
-      Student_Spanish: string;
-      Spanish_Response: string;
+      Student_french: string;
+      french_Response: string;
       English_Analysis: string;
     }[]
   >([]);
@@ -59,7 +59,7 @@ export default function LLMQuery({ initialInput = "" }: LLMQueryProps) {
           {/* <textarea
             value={userInput}
             onChange={(e) => setUserInput(e.target.value)}
-            placeholder="Enter your Spanish text here..."
+            placeholder="Enter your french text here..."
             className="w-full p-2 border rounded-md min-h-[100px] text-black"
             disabled={isLoading}
           /> */}
@@ -81,7 +81,7 @@ export default function LLMQuery({ initialInput = "" }: LLMQueryProps) {
           {response.map((item, index) => (
             <div key={index} className="border rounded-md p-4">
               <div className="font-semibold text-green-600">
-                Spanish: {item.Spanish_Response}
+                french: {item.french_Response}
               </div>
               <div className="mt-2 text-gray-700">
                 English: {item.English_Analysis}
