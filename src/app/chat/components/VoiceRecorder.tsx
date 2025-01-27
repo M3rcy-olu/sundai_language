@@ -235,9 +235,9 @@ const VoiceRecorder = ({ onTranscriptComplete }: VoiceRecorderProps) => {
           try {
             await transcriptionComplete;
             setProcessingStatus('Transcription complete');
-          } catch (error) {
+          } catch (error: unknown) {
             console.error('Transcription error:', error);
-            setProcessingStatus('Transcription failed: ' + error.message);
+            setProcessingStatus('Transcription failed: ' + (error instanceof Error ? error.message : String(error)));
           } finally {
             // Close WebSocket after transcription attempt (success or failure)
             if (websocketRef.current?.readyState === WebSocket.OPEN) {
