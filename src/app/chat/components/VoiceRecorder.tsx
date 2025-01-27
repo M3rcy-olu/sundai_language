@@ -1,12 +1,18 @@
-'use client';
+"use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import Button from "@/app/components/button";
+import Subtext from "@/app/components/subtext";
+import React, { useState, useRef, useEffect } from "react";
 
 interface VoiceRecorderProps {
   onTranscriptComplete: (transcript: string) => void;
+  isSaving: boolean;
 }
 
-const VoiceRecorder = ({ onTranscriptComplete }: VoiceRecorderProps) => {
+const VoiceRecorder = ({
+  onTranscriptComplete,
+  isSaving,
+}: VoiceRecorderProps) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStatus, setProcessingStatus] = useState('');
@@ -65,11 +71,11 @@ const VoiceRecorder = ({ onTranscriptComplete }: VoiceRecorderProps) => {
     setProcessingStatus('');
     try {
       // Get new stream
-      const stream = await navigator.mediaDevices.getUserMedia({ 
+      const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           sampleRate: 16000,
-          channelCount: 1
-        } 
+          channelCount: 1,
+        },
       });
       streamRef.current = stream;
       
@@ -91,11 +97,11 @@ const VoiceRecorder = ({ onTranscriptComplete }: VoiceRecorderProps) => {
       processor.connect(audioContextRef.current.destination);
 
       // Connect to WebSocket
-      const ws = new WebSocket('ws://localhost:8000/api/speech/ws/speech');
+      const ws = new WebSocket("ws://localhost:8000/api/speech/ws/speech");
       websocketRef.current = ws;
 
       ws.onopen = () => {
-        console.log('WebSocket connected');
+        console.log("WebSocket connected");
         // Clear buffer on new connection
         audioBufferRef.current = [];
       };
@@ -113,11 +119,11 @@ const VoiceRecorder = ({ onTranscriptComplete }: VoiceRecorderProps) => {
       };
 
       ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
+        console.error("WebSocket error:", error);
       };
 
       ws.onclose = (event) => {
-        console.log('WebSocket closed:', event.code, event.reason);
+        console.log("WebSocket closed:", event.code, event.reason);
         // Clear buffer on connection close
         audioBufferRef.current = [];
       };
@@ -137,7 +143,7 @@ const VoiceRecorder = ({ onTranscriptComplete }: VoiceRecorderProps) => {
 
       setIsRecording(true);
     } catch (error) {
-      console.error('Error starting recording:', error);
+      console.error("Error starting recording:", error);
     }
   };
 
@@ -297,45 +303,13 @@ const VoiceRecorder = ({ onTranscriptComplete }: VoiceRecorderProps) => {
   };
 
   return (
-    <div className="p-4 bg-white rounded-lg shadow-md">
-      <div className="flex flex-col items-center gap-4">
-        <div className="flex gap-4">
-          <button
-            onClick={startRecording}
-            disabled={isRecording || isProcessing}
-            className={`px-4 py-2 rounded-full ${
-              isRecording || isProcessing
-                ? 'bg-gray-300 cursor-not-allowed'
-                : 'bg-blue-500 hover:bg-blue-600 text-white'
-            }`}
-          >
-            Start Recording
-          </button>
-          <button
-            onClick={stopRecording}
-            disabled={!isRecording || isProcessing}
-            className={`px-4 py-2 rounded-full ${
-              !isRecording || isProcessing
-                ? 'bg-gray-300 cursor-not-allowed'
-                : 'bg-red-500 hover:bg-red-600 text-white'
-            }`}
-          >
-            {isProcessing ? 'Processing...' : 'Stop Recording'}
-          </button>
-        </div>
-        
-        <div className="w-full">
-          {processingStatus && (
-            <div className="mb-2 text-sm text-gray-600">
-              {processingStatus}
-            </div>
-          )}
-          <p className="font-semibold mb-2">Transcript:</p>
-          <div className="p-3 bg-gray-50 rounded-lg min-h-[100px] max-h-[200px] overflow-y-auto">
-            {isProcessing ? 'Processing audio...' : (transcript || 'No transcript yet...')}
-          </div>
-        </div>
-      </div>
+    <div className="flex flex-col items-center justify-center">
+      <Subtext text={transcript || "No transcript yet..."} />
+      <Button
+        onClick={isRecording ? stopRecording : startRecording}
+        text={isRecording ? "Stop" : "Speak"}
+        disabled={isSaving}
+      />
     </div>
   );
 };

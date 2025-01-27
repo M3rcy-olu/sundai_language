@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import React, { useState } from "react";
 import Navbar from "../components/navbar";
@@ -19,11 +19,14 @@ export default function Chat() {
   return (
     <PageTransition>
       <main className="page-alignment gap-[10vh]">
-        <VoiceRecorder onTranscriptComplete={handleVoiceTranscript} />
-        <LLMToSpeech initialInput={voiceTranscript} />
         <Navbar />
         <ChatBot showText={false} />
-        <Transcription />
+
+        <LLMToSpeech initialInput={voiceTranscript} />
+        <VoiceRecorder
+          onTranscriptComplete={handleVoiceTranscript}
+          isSaving={false}
+        />
       </main>
     </PageTransition>
   );
