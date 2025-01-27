@@ -1,23 +1,38 @@
-"use client";
-import { useState } from "react";
-import { generateResponse } from "../../../api/typescript/OpenAI";
-import { generateSpeech } from "../../../api/typescript/elevenlabsTTS";
+"use client"
+import { useState, useEffect} from 'react';
+import { generateResponse } from '../../../api/typescript/OpenAI';
+import { generateSpeech } from '../../../api/typescript/elevenlabsTTS';
 import Transcription from "./transcription";
 import Button from "@/app/components/button";
 import TextTransition from "./TextTransition";
 import { AnimatePresence, motion } from "framer-motion";
 
-export default function LLMToSpeech() {
-  const [userInput, setUserInput] = useState("");
-  const [response, setResponse] = useState<
-    {
-      Student_Spanish: string;
-      Spanish_Response: string;
-      English_Analysis: string;
-    }[]
-  >([]);
+interface LLMToSpeechProps {
+  initialInput?: string;
+}
+export default function LLMToSpeech({ initialInput }: LLMToSpeechProps) {
+  const [userInput, setUserInput] = useState('');
+  const [response, setResponse] = useState<{
+    Student_Spanish: string;
+    Spanish_Response: string;
+    English_Analysis: string;
+  }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
+  
+  useEffect(() => {
+    if (initialInput) {
+      console.log('Received initialInput:', initialInput);
+      setUserInput(initialInput);
+    }
+  }, [initialInput]);
+
+  useEffect(() => {
+    if (userInput) {
+      console.log('Submitting userInput:', userInput);
+      handleSubmit(new Event('submit') as any);
+    }
+  }, [userInput]);
 
   const playAudio = async (audioData: ArrayBuffer) => {
     const audioContext = new AudioContext();

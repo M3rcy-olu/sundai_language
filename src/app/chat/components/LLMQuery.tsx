@@ -1,14 +1,15 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { generateResponse } from "../../../api/typescript/OpenAI";
 import { NextResponse } from "next/server";
 import Button from "@/app/components/button";
 import Subtext from "@/app/components/subtext";
 
-// TODO: Implement the UI for this component
-// Component that queries the LLM and returns the reponse
+interface LLMQueryProps {
+  initialInput?: string;
+}
 
-export default function LLMQuery() {
+export default function LLMQuery({ initialInput = "" }: LLMQueryProps) {
   const [userInput, setUserInput] = useState("");
   const [response, setResponse] = useState<
     {
@@ -19,6 +20,20 @@ export default function LLMQuery() {
   >([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (initialInput) {
+      setUserInput(initialInput);
+      handleSubmit(new Event('submit') as any);
+    }
+  }, [initialInput]);
+
+  // Function to handle voice input
+  const handleVoiceInput = (transcript: string) => {
+    setUserInput(transcript);
+    // Automatically submit after receiving voice input
+    handleSubmit(new Event('submit') as any);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,6 +92,6 @@ export default function LLMQuery() {
       )}
     </div>
   );
-
-  // Rest of your component code
 }
+
+export { handleVoiceInput };

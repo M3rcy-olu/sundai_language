@@ -13,9 +13,14 @@ import tempfile
 import torch
 from openai import OpenAI  # Add OpenAI client import
 from scipy import signal
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Load environment variables
-load_dotenv('../../.env.local')
+load_dotenv()
 
 # REPLICATE CODE
 # import replicate
@@ -44,7 +49,7 @@ class AudioHandler:
         self.p = pyaudio.PyAudio()
         self.buffer = []
         self.BUFFER_SECONDS = 4.0  # Increased from 3.0 for better context
-        self.SILENCE_THRESHOLD = 0.008  # Adjusted for better speech detection
+        self.SILENCE_THRESHOLD = 0.09  # Adjusted for better speech detection
         
         print("\nAvailable Audio Devices:")
         for i in range(self.p.get_device_count()):
@@ -91,47 +96,34 @@ class AudioHandler:
 
     def save_audio_chunk(self, audio_data, filename):
         """Save audio data to a WAV file for API processing"""
-        audio_data_int = (audio_data * 32767).astype(np.int16)
-        with wave.open(filename, 'wb') as wf:
-            wf.setnchannels(self.CHANNELS)
-            wf.setsampwidth(2)  # 2 bytes for int16
-            wf.setframerate(self.RATE)
-            wf.writeframes(audio_data_int.tobytes())
+        try:
+            logger.info(f"Saving audio chunk: shape={audio_data.shape}, max={np.max(np.abs(audio_data)):.4f}")
+            audio_data_int = (audio_data * 32767).astype(np.int16)
+            with wave.open(filename, 'wb') as wf:
+                wf.setnchannels(self.CHANNELS)
+                wf.setsampwidth(2)  # 2 bytes for int16
+                wf.setframerate(self.RATE)
+                wf.writeframes(audio_data_int.tobytes())
+            logger.info(f"Successfully saved audio to {filename}")
+        except Exception as e:
+            logger.error(f"Error saving audio chunk: {e}")
+            raise
         
     async def transcribe_audio(self, audio_data):
         """Transcribe audio data using Whisper API"""
         try:
-            ############################
-            # #Transcription using local model
-            ############################
-            # Add noise reduction
-            # audio_data = self.reduce_noise(audio_data)
+            logger.info(f"Starting transcription: input shape={audio_data.shape}, max amplitude={np.max(np.abs(audio_data)):.4f}")
             
-            # # Normalize audio
-            # audio_data = audio_data / np.max(np.abs(audio_data))
-            
-            # # Use Whisper to transcribe
-            # result = self.model.transcribe(
-            #     audio_data,
-            #     language="en",
-            #     task="transcribe",
-            #     temperature=0.2,
-            #     fp16=torch.cuda.is_available()
-            # )
-            
-            # return result["text"].strip()
-
-            ############################
-            # #Transcription using OpenAI API
-            ############################
-            # Create a temporary WAV file
             # Add audio preprocessing
             audio_data = self.preprocess_audio(audio_data)
+            logger.info(f"After preprocessing: shape={audio_data.shape}, max amplitude={np.max(np.abs(audio_data)):.4f}")
             
             with tempfile.NamedTemporaryFile(suffix='.wav', delete=True) as temp_audio:
                 self.save_audio_chunk(audio_data, temp_audio.name)
+                logger.info(f"Temp file size: {os.path.getsize(temp_audio.name)} bytes")
                 
                 with open(temp_audio.name, 'rb') as audio_file:
+                    logger.info("Sending request to OpenAI Whisper API")
                     response = self.client.audio.transcriptions.create(
                         model="whisper-1",
                         file=audio_file,
@@ -139,26 +131,40 @@ class AudioHandler:
                         temperature=0.0,  # Reduced from default for more deterministic output
                     )
                     
-                return response.text.strip()
+                transcript = response.text.strip()
+                logger.info(f"Received transcript: '{transcript}'")
+                return transcript
                 
         except Exception as e:
-            print(f"\nError in transcription: {e}")
+            logger.error(f"Error in transcription: {e}")
             return ""
 
     def preprocess_audio(self, audio_data):
         """Preprocess audio data for better transcription"""
-        # Normalize audio
-        audio_data = audio_data / np.max(np.abs(audio_data))
-        
-        # Apply basic noise reduction
-        noise_floor = np.mean(np.abs(audio_data[:1000]))  # Estimate noise from first 1000 samples
-        audio_data = np.where(np.abs(audio_data) < noise_floor * 2, 0, audio_data)
-        
-        # Apply simple low-pass filter to reduce high-frequency noise
-        b, a = signal.butter(4, 0.8, btype='low')
-        audio_data = signal.filtfilt(b, a, audio_data)
-        
-        return audio_data
+        try:
+            logger.info("Starting audio preprocessing")
+            
+            # Normalize audio
+            max_amplitude = np.max(np.abs(audio_data))
+            logger.info(f"Original max amplitude: {max_amplitude:.4f}")
+            if max_amplitude > 0:
+                audio_data = audio_data / max_amplitude
+            
+            # Apply basic noise reduction
+            noise_floor = np.mean(np.abs(audio_data[:1000]))
+            logger.info(f"Estimated noise floor: {noise_floor:.4f}")
+            audio_data = np.where(np.abs(audio_data) < noise_floor * 2, 0, audio_data)
+            
+            # Apply simple low-pass filter
+            b, a = signal.butter(4, 0.8, btype='low')
+            audio_data = signal.filtfilt(b, a, audio_data)
+            
+            logger.info(f"After preprocessing: max amplitude={np.max(np.abs(audio_data)):.4f}")
+            return audio_data
+            
+        except Exception as e:
+            logger.error(f"Error in preprocessing: {e}")
+            raise
 
 async def main():
     audio_handler = AudioHandler()
