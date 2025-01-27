@@ -10,6 +10,10 @@ const VoiceRecorder = () => {
   const audioContextRef = useRef<AudioContext | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  
+  // Add buffer for audio chunks
+  const audioBufferRef = useRef<Float32Array[]>([]);
+  const CHUNKS_TO_BUFFER = 8; // Buffer 8 chunks before sending (about 1 second of audio)
 
   const startRecording = async () => {
     try {
@@ -41,11 +45,15 @@ const VoiceRecorder = () => {
 
       ws.onopen = () => {
         console.log('WebSocket connected');
+        // Clear buffer on new connection
+        audioBufferRef.current = [];
       };
 
       ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
+        console.log('Received message:', data);
         if (data.status === 'success' && data.transcript) {
+          console.log('Adding transcript:', data.transcript);
           setTranscript(prev => prev + ' ' + data.transcript);
         }
       };
@@ -56,6 +64,8 @@ const VoiceRecorder = () => {
 
       ws.onclose = (event) => {
         console.log('WebSocket closed:', event.code, event.reason);
+        // Clear buffer on connection close
+        audioBufferRef.current = [];
       };
 
       // Handle audio processing
@@ -64,12 +74,37 @@ const VoiceRecorder = () => {
           const inputData = e.inputBuffer.getChannelData(0);
           const audioData = new Float32Array(inputData);
           
-          // Convert to base64
-          const bytes = new Uint8Array(audioData.buffer);
-          const base64Audio = btoa(String.fromCharCode.apply(null, Array.from(bytes)));
+          // Add chunk to buffer
+          audioBufferRef.current.push(audioData);
           
-          // Send to WebSocket
-          ws.send(JSON.stringify({ audio: base64Audio }));
+          // Log audio stats
+          const maxAmplitude = Math.max(...Array.from(audioData).map(Math.abs));
+          console.log(`Audio chunk stats: length=${audioData.length}, max amplitude=${maxAmplitude.toFixed(4)}`);
+          
+          // If we have enough chunks, send them
+          if (audioBufferRef.current.length >= CHUNKS_TO_BUFFER) {
+            // Combine all chunks
+            const combinedLength = audioBufferRef.current.reduce((sum, chunk) => sum + chunk.length, 0);
+            const combinedAudio = new Float32Array(combinedLength);
+            let offset = 0;
+            
+            audioBufferRef.current.forEach(chunk => {
+              combinedAudio.set(chunk, offset);
+              offset += chunk.length;
+            });
+            
+            // Convert combined audio to base64
+            const bytes = new Uint8Array(combinedAudio.buffer);
+            const base64Audio = btoa(String.fromCharCode.apply(null, Array.from(bytes)));
+            
+            // Send to WebSocket
+            ws.send(JSON.stringify({ audio: base64Audio }));
+            
+            // Clear buffer
+            audioBufferRef.current = [];
+            
+            console.log(`Sent combined audio: length=${combinedLength}, chunks=${CHUNKS_TO_BUFFER}`);
+          }
         }
       };
 
@@ -81,6 +116,28 @@ const VoiceRecorder = () => {
 
   const stopRecording = () => {
     console.log('Stopping recording...');
+    
+    // Send any remaining buffered audio
+    if (websocketRef.current && audioBufferRef.current.length > 0) {
+      const combinedLength = audioBufferRef.current.reduce((sum, chunk) => sum + chunk.length, 0);
+      const combinedAudio = new Float32Array(combinedLength);
+      let offset = 0;
+      
+      audioBufferRef.current.forEach(chunk => {
+        combinedAudio.set(chunk, offset);
+        offset += chunk.length;
+      });
+      
+      const bytes = new Uint8Array(combinedAudio.buffer);
+      const base64Audio = btoa(String.fromCharCode.apply(null, Array.from(bytes)));
+      
+      websocketRef.current.send(JSON.stringify({ audio: base64Audio }));
+      console.log(`Sent final combined audio: length=${combinedLength}, chunks=${audioBufferRef.current.length}`);
+    }
+    
+    // Clear the buffer
+    audioBufferRef.current = [];
+
     // Stop the WebSocket first to prevent any more data being sent
     if (websocketRef.current) {
       console.log('Closing WebSocket connection...');

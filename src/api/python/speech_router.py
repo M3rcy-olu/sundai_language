@@ -29,16 +29,21 @@ async def websocket_endpoint(websocket: WebSocket):
                 # Convert base64 audio to numpy array
                 audio_bytes = base64.b64decode(audio_data['audio'])
                 audio_np = np.frombuffer(audio_bytes, dtype=np.float32)
+                logger.info(f"Received audio chunk: shape={audio_np.shape}, max amplitude={np.max(np.abs(audio_np)):.4f}")
                 
                 # Process audio if it's above silence threshold
                 if np.max(np.abs(audio_np)) > audio_handler.SILENCE_THRESHOLD:
+                    logger.info("Audio above silence threshold, processing...")
                     # Transcribe the audio
                     transcript = await audio_handler.transcribe_audio(audio_np)
                     if transcript:
+                        logger.info(f"Sending transcript: '{transcript}'")
                         await websocket.send_json({
                             "status": "success",
                             "transcript": transcript
                         })
+                else:
+                    logger.info("Audio below silence threshold, skipping...")
             
             except WebSocketDisconnect:
                 logger.info(f"Client {client_id} disconnected gracefully")
