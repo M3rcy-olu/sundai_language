@@ -49,7 +49,7 @@ class AudioHandler:
         self.p = pyaudio.PyAudio()
         self.buffer = []
         self.BUFFER_SECONDS = 4.0  # Increased from 3.0 for better context
-        self.SILENCE_THRESHOLD = 0.02  # Adjusted for better speech detection
+        self.SILENCE_THRESHOLD = 0.01  # Adjusted for better speech detection
         
         print("\nAvailable Audio Devices:")
         for i in range(self.p.get_device_count()):
