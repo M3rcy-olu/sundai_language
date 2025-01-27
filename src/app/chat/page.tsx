@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import LLMQuery from "./components/LLMQuery";
 import Navbar from "../components/navbar";
@@ -11,12 +13,10 @@ export default function Chat() {
   return (
     <PageTransition>
       <main className="page-alignment gap-[10vh]">
-        <LLMToSpeech />
         <Navbar />
         <ChatBot showText={false} />
-        <Transcription />
-        {/* <LLMQuery /> */}
-       
+
+        <LLMToSpeech />
       </main>
     </PageTransition>
   );
