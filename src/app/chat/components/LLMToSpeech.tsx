@@ -1,9 +1,13 @@
 "use client"
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { generateResponse } from '../../../api/typescript/OpenAI';
 import { generateSpeech } from '../../../api/typescript/elevenlabsTTS';
 
-export default function LLMToSpeech() {
+interface LLMToSpeechProps {
+  initialInput?: string;
+}
+
+export default function LLMToSpeech({initialInput}: LLMToSpeechProps) {
   const [userInput, setUserInput] = useState('');
   const [response, setResponse] = useState<{
     Student_Spanish: string;
@@ -12,6 +16,14 @@ export default function LLMToSpeech() {
   }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (initialInput) {
+      setUserInput(initialInput);
+      console.log('UserInput:', userInput);
+      handleSubmit(new Event('submit') as any);
+    }
+  }, [initialInput]);
 
   const playAudio = async (audioData: ArrayBuffer) => {
     const audioContext = new AudioContext();

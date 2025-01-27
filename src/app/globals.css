@@ -33,7 +33,7 @@ body {
   background: linear-gradient(-45deg, #2f3336, #151518, #373a3d, #211e25);
   background-size: 400% 400%;
   animation: gradientAnimation 30s ease infinite;
-  overflow: hidden;
+  overflow: auto;
 }
 
 .page-alignment {

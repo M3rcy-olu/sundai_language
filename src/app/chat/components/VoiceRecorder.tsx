@@ -2,7 +2,11 @@
 
 import React, { useState, useRef } from 'react';
 
-const VoiceRecorder = () => {
+interface VoiceRecorderProps {
+  onTranscriptComplete: (transcript: string) => void;
+}
+
+const VoiceRecorder = ({ onTranscriptComplete }: VoiceRecorderProps) => {
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState('');
   const streamRef = useRef<MediaStream | null>(null);
@@ -16,6 +20,7 @@ const VoiceRecorder = () => {
   const CHUNKS_TO_BUFFER = 8; // Buffer 8 chunks before sending (about 1 second of audio)
 
   const startRecording = async () => {
+    setTranscript('');
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
@@ -138,6 +143,13 @@ const VoiceRecorder = () => {
     // Clear the buffer
     audioBufferRef.current = [];
 
+    // Print final transcript to terminal
+    console.log('\nFinal Transcript:', transcript);
+    
+    // Send transcript to parent component
+    onTranscriptComplete(transcript);
+    console.log('Transcript sent to parent component', transcript);
+
     // Stop the WebSocket first to prevent any more data being sent
     if (websocketRef.current) {
       console.log('Closing WebSocket connection...');
@@ -163,15 +175,6 @@ const VoiceRecorder = () => {
 
     setIsRecording(false);
   };
-
-  // Clean up on component unmount
-  React.useEffect(() => {
-    return () => {
-      if (isRecording) {
-        stopRecording();
-      }
-    };
-  }, [isRecording]);
 
   return (
     <div className="p-4 bg-white rounded-lg shadow-md">
