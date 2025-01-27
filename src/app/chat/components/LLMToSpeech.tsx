@@ -9,6 +9,7 @@ import { AnimatePresence, motion } from "framer-motion";
 
 export default function LLMToSpeech() {
   const [userInput, setUserInput] = useState("");
+  const [scenarioInput, setScenarioInput] = useState("");
   const [response, setResponse] = useState<
     {
       Student_Spanish: string;
@@ -34,8 +35,8 @@ export default function LLMToSpeech() {
     setError("");
 
     try {
-      // First, get the LLM response
-      const llmResult = await generateResponse(userInput);
+      // First, get the LLM response with scenario
+      const llmResult = await generateResponse(userInput, scenarioInput);
       setResponse(llmResult.response);
 
       // Then, generate and play speech from the Spanish response
@@ -76,7 +77,16 @@ export default function LLMToSpeech() {
         </div>
       )}
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
+        <div className="space-y-4">
+          {/* Scenario Input */}
+          <textarea
+            value={scenarioInput}
+            onChange={(e) => setScenarioInput(e.target.value)}
+            placeholder="Describe the scenario (e.g., 'In this scenario, I am acting as a food server, and the student will order food.')"
+            className="w-full p-2 border rounded-md min-h-[100px] text-black"
+            disabled={isLoading}
+          />
+          {/* User Input */}
           <textarea
             value={userInput}
             onChange={(e) => setUserInput(e.target.value)}
@@ -89,7 +99,7 @@ export default function LLMToSpeech() {
           <Button
             text={isLoading ? "Stop" : "Speak"}
             type="submit"
-            disabled={isLoading || !userInput.trim()}
+            disabled={isLoading || !userInput.trim() || !scenarioInput.trim()}
           />
         </div>
       </form>

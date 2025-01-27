@@ -17,17 +17,20 @@ router = APIRouter()
 # Add request model
 class GenerateRequest(BaseModel):
     user_prompt: str
-
+    scenario_prompt: str
 @router.post("/generateResponse")
 async def generate_text(request: GenerateRequest):
     """
     This function generates a response from the OpenAI API based on the user's prompt.
     It uses the OpenAI API to generate a response to the user's prompt.
     """
+    
     try:
         # System prompt for consistent output formatting
+        
         system_prompt = """
-        I am Ella, a language instructor specializing in Spanish. My role is to roleplay scenarios with the student, helping them practice practical conversations in Spanish. In this scenario, I am acting as a food server, and the student will order food.
+        I am Ella, a language instructor specializing in Spanish. My role is to roleplay scenarios with the student, helping them practice practical conversations in Spanish. 
+        {scenario_prompt}
 
         I will respond naturally in Spanish, engaging in the roleplay.
         After the student’s **Spanish input**, I will analyze **only the student's input** (not my own response) in English, providing feedback on their grammar, vocabulary, and structure. 
@@ -46,12 +49,7 @@ async def generate_text(request: GenerateRequest):
             ]
         }
         """ 
-        
-        # Debug prints
-        print("1. Received request:", request.user_prompt)
-        print("2. API Key present:", bool(api_key))
-        print("3. API Key value:", api_key[:10] + "..." if api_key else None)
-        
+        # Generate the response 
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
