@@ -96,8 +96,13 @@ const VoiceRecorder = ({
       source.connect(processor);
       processor.connect(audioContextRef.current.destination);
 
+      // Get WebSocket URL based on environment
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsHost = process.env.NEXT_PUBLIC_WS_HOST || window.location.host;
+      const wsUrl = `${wsProtocol}//${wsHost}/api/speech/ws/speech`;
+
       // Connect to WebSocket
-      const ws = new WebSocket("ws://localhost:8000/api/speech/ws/speech");
+      const ws = new WebSocket(wsUrl);
       websocketRef.current = ws;
 
       ws.onopen = () => {
