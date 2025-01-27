@@ -79,6 +79,7 @@ export default function LLMToSpeech({ initialInput }: LLMToSpeechProps) {
 
       // Then get the LLM response using the generated scenario
       const llmResult = await generateResponse(userInput, generatedScenario);
+      console.log("LLM Result:", llmResult);
       setResponse(llmResult.response);
 
       // Generate and play speech

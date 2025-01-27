@@ -15,6 +15,7 @@ audio_handler = AudioHandler()
 @router.websocket("/ws/speech")
 async def websocket_endpoint(websocket: WebSocket):
     client_id = id(websocket)
+    connection_closed = False
     logger.info(f"New WebSocket connection request from client {client_id}")
     await websocket.accept()
     logger.info(f"WebSocket connection accepted for client {client_id}")
@@ -29,39 +30,71 @@ async def websocket_endpoint(websocket: WebSocket):
                 # Convert base64 audio to numpy array
                 audio_bytes = base64.b64decode(audio_data['audio'])
                 audio_np = np.frombuffer(audio_bytes, dtype=np.float32)
-                logger.info(f"Received audio chunk: shape={audio_np.shape}, max amplitude={np.max(np.abs(audio_np)):.4f}")
+                logger.info(f"Received audio: shape={audio_np.shape}, max amplitude={np.max(np.abs(audio_np)):.4f}")
                 
-                # Process audio if it's above silence threshold
-                if np.max(np.abs(audio_np)) > audio_handler.SILENCE_THRESHOLD:
-                    logger.info("Audio above silence threshold, processing...")
-                    # Transcribe the audio
-                    transcript = await audio_handler.transcribe_audio(audio_np)
-                    if transcript:
-                        logger.info(f"Sending transcript: '{transcript}'")
+                # Check if this is a complete recording
+                if audio_data.get('complete', False):
+                    logger.info("Processing complete recording...")
+                    await websocket.send_json({
+                        "status": "processing",
+                        "message": "Starting audio processing..."
+                    })
+                    
+                    try:
+                        # Process the complete audio
+                        if np.max(np.abs(audio_np)) > audio_handler.SILENCE_THRESHOLD:
+                            await websocket.send_json({
+                                "status": "processing",
+                                "message": "Transcribing audio..."
+                            })
+                            
+                            transcript = await audio_handler.transcribe_audio(audio_np)
+                            if transcript:
+                                logger.info(f"Sending complete transcript: '{transcript}'")
+                                await websocket.send_json({
+                                    "status": "success",
+                                    "transcript": transcript
+                                })
+                            else:
+                                logger.info("No transcript generated")
+                                await websocket.send_json({
+                                    "status": "error",
+                                    "message": "No speech detected in recording"
+                                })
+                        else:
+                            logger.info("Audio too quiet, no transcription performed")
+                            await websocket.send_json({
+                                "status": "error",
+                                "message": "Audio level too low"
+                            })
+                    except Exception as e:
+                        logger.error(f"Error processing audio: {e}")
                         await websocket.send_json({
-                            "status": "success",
-                            "transcript": transcript
+                            "status": "error",
+                            "message": str(e)
                         })
-                else:
-                    logger.info("Audio below silence threshold, skipping...")
             
             except WebSocketDisconnect:
                 logger.info(f"Client {client_id} disconnected gracefully")
+                connection_closed = True
                 break
-                
-    except Exception as e:
-        logger.error(f"Error in websocket for client {client_id}: {str(e)}")
-        try:
-            await websocket.send_json({
-                "status": "error",
-                "message": str(e)
-            })
-        except:
-            logger.error(f"Failed to send error message to client {client_id}")
+            except Exception as e:
+                logger.error(f"Error in websocket for client {client_id}: {e}")
+                try:
+                    await websocket.send_json({
+                        "status": "error",
+                        "message": str(e)
+                    })
+                except Exception as send_error:
+                    logger.error(f"Failed to send error message to client {client_id}")
+                break
     finally:
-        try:
+        if not connection_closed:
             logger.info(f"Closing WebSocket connection for client {client_id}")
-            await websocket.close()
-        except:
-            logger.error(f"Error while closing WebSocket for client {client_id}")
+            try:
+                await websocket.close()
+            except Exception as e:
+                # Only log if it's not a "WebSocket already closed" type of error
+                if "already closed" not in str(e).lower():
+                    logger.error(f"Error closing websocket for client {client_id}: {e}")
         logger.info(f"WebSocket connection closed for client {client_id}")

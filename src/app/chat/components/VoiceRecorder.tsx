@@ -1,4 +1,5 @@
 "use client";
+"use client";
 
 import Button from "@/app/components/button";
 import Subtext from "@/app/components/subtext";
@@ -7,8 +8,13 @@ import React, { useState, useRef } from "react";
 interface VoiceRecorderProps {
   onTranscriptComplete: (transcript: string) => void;
   isSaving: boolean;
+  isSaving: boolean;
 }
 
+const VoiceRecorder = ({
+  onTranscriptComplete,
+  isSaving,
+}: VoiceRecorderProps) => {
 const VoiceRecorder = ({
   onTranscriptComplete,
   isSaving,
@@ -48,13 +54,15 @@ const VoiceRecorder = ({
       processorRef.current = processor;
 
       source.connect(processor);
-      processor.connect(audioContext.destination);
+      processor.connect(audioContextRef.current.destination);
 
       // Connect to WebSocket
+      const ws = new WebSocket("ws://localhost:8000/api/speech/ws/speech");
       const ws = new WebSocket("ws://localhost:8000/api/speech/ws/speech");
       websocketRef.current = ws;
 
       ws.onopen = () => {
+        console.log("WebSocket connected");
         console.log("WebSocket connected");
         // Clear buffer on new connection
         audioBufferRef.current = [];
@@ -71,9 +79,11 @@ const VoiceRecorder = ({
 
       ws.onerror = (error) => {
         console.error("WebSocket error:", error);
+        console.error("WebSocket error:", error);
       };
 
       ws.onclose = (event) => {
+        console.log("WebSocket closed:", event.code, event.reason);
         console.log("WebSocket closed:", event.code, event.reason);
         // Clear buffer on connection close
         audioBufferRef.current = [];
@@ -132,6 +142,7 @@ const VoiceRecorder = ({
 
       setIsRecording(true);
     } catch (error) {
+      console.error("Error starting recording:", error);
       console.error("Error starting recording:", error);
     }
   };
@@ -201,11 +212,143 @@ const VoiceRecorder = ({
     }
 
     setIsRecording(false);
+    
+    // Send all accumulated audio
+    if (websocketRef.current && audioBufferRef.current.length > 0) {
+      try {
+        // Combine chunks in smaller batches to prevent memory issues
+        const BATCH_SIZE = 100; // Process 100 chunks at a time
+        const totalChunks = audioBufferRef.current.length;
+        const processedChunks: Float32Array[] = [];
+        
+        for (let i = 0; i < totalChunks; i += BATCH_SIZE) {
+          setProcessingStatus(`Processing audio batch ${Math.min(i + BATCH_SIZE, totalChunks)}/${totalChunks}...`);
+          const batchChunks = audioBufferRef.current.slice(i, i + BATCH_SIZE);
+          const batchLength = batchChunks.reduce((sum, chunk) => sum + chunk.length, 0);
+          const batchAudio = new Float32Array(batchLength);
+          
+          let offset = 0;
+          batchChunks.forEach(chunk => {
+            batchAudio.set(chunk, offset);
+            offset += chunk.length;
+          });
+          
+          processedChunks.push(batchAudio);
+          // Small delay to allow UI updates
+          await new Promise(resolve => setTimeout(resolve, 0));
+        }
+        
+        setProcessingStatus('Combining audio data...');
+        const totalLength = processedChunks.reduce((sum, chunk) => sum + chunk.length, 0);
+        const combinedAudio = new Float32Array(totalLength);
+        let offset = 0;
+        
+        processedChunks.forEach(chunk => {
+          combinedAudio.set(chunk, offset);
+          offset += chunk.length;
+        });
+        
+        setProcessingStatus('Converting to base64...');
+        const bytes = new Uint8Array(combinedAudio.buffer);
+        
+        // Convert to base64 using Blob and FileReader
+        const blob = new Blob([bytes], { type: 'application/octet-stream' });
+        const base64Audio = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = reader.result as string;
+            // Remove the data URL prefix
+            const base64 = result.split(',')[1];
+            resolve(base64);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        
+        // Send complete audio for processing
+        if (websocketRef.current?.readyState === WebSocket.OPEN) {
+          setProcessingStatus('Sending audio for transcription...');
+          
+          // Wait for transcription response
+          const transcriptionComplete = new Promise<void>((resolve, reject) => {
+            const messageHandler = (event: MessageEvent) => {
+              try {
+                const response = JSON.parse(event.data);
+                if (response.status === 'success' && response.transcript) {
+                  setTranscript(response.transcript);
+                  resolve();
+                } else if (response.status === 'error') {
+                  reject(new Error(response.message || 'Transcription failed'));
+                }
+              } catch (error) {
+                console.error('Error parsing WebSocket message:', error);
+              }
+            };
+            
+            const closeHandler = () => {
+              websocketRef.current?.removeEventListener('message', messageHandler);
+              websocketRef.current?.removeEventListener('close', closeHandler);
+              reject(new Error('WebSocket closed before receiving transcription'));
+            };
+            
+            websocketRef.current?.addEventListener('message', messageHandler);
+            websocketRef.current?.addEventListener('close', closeHandler);
+            
+            // Remove the event listeners after 30 seconds (timeout)
+            setTimeout(() => {
+              websocketRef.current?.removeEventListener('message', messageHandler);
+              websocketRef.current?.removeEventListener('close', closeHandler);
+              reject(new Error('Transcription timeout'));
+            }, 30000);
+          });
+          
+          // Send the audio data
+          websocketRef.current.send(JSON.stringify({ 
+            audio: base64Audio,
+            complete: true
+          }));
+          console.log(`Sent complete audio: length=${totalLength}, chunks=${totalChunks}`);
+          
+          try {
+            await transcriptionComplete;
+            setProcessingStatus('Transcription complete');
+          } catch (error: unknown) {
+            console.error('Transcription error:', error);
+            setProcessingStatus('Transcription failed: ' + (error instanceof Error ? error.message : String(error)));
+          } finally {
+            // Close WebSocket after transcription attempt (success or failure)
+            if (websocketRef.current?.readyState === WebSocket.OPEN) {
+              console.log('Closing WebSocket connection...');
+              websocketRef.current.close(1000, 'Transcription complete');
+              websocketRef.current = null;
+            }
+          }
+        } else {
+          console.error('WebSocket is not open');
+          setProcessingStatus('Error: WebSocket connection lost');
+        }
+      } catch (error) {
+        console.error('Error processing audio:', error);
+        setProcessingStatus('Error processing audio');
+      }
+    } else {
+      console.log('No audio to process');
+      setProcessingStatus('No audio to process');
+    }
+    
+    // Clear the buffer
+    audioBufferRef.current = [];
+    setIsProcessing(false);
   };
 
-  // Clean up on component unmount
-
   return (
+    <div className="flex flex-col items-center justify-center">
+      <Subtext text={transcript || "No transcript yet..."} />
+      <Button
+        onClick={isRecording ? stopRecording : startRecording}
+        text={isRecording ? "Stop" : "Speak"}
+        disabled={isSaving}
+      />
     <div className="flex flex-col items-center justify-center">
       <Subtext text={transcript || "No transcript yet..."} />
       <Button
