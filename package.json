@@ -12,12 +12,14 @@
     "axios": "^1.7.9",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
+    "elevenlabs": "^1.50.4",
     "express": "^4.21.2",
     "framer-motion": "^12.0.5",
     "next": "^15.1.6",
     "openai": "^4.80.1",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "stream": "^0.0.3"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

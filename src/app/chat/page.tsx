@@ -14,6 +14,7 @@ export default function Chat() {
         <Navbar />
         <ChatBot showText={false} />
         <Transcription />
+        {/* <LLMQuery /> */}
         <LLMToSpeech />
       </main>
     </PageTransition>
