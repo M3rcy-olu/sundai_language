@@ -144,11 +144,14 @@ const VoiceRecorder = ({ onTranscriptComplete }: VoiceRecorderProps) => {
     audioBufferRef.current = [];
 
     // Print final transcript to terminal
-    console.log('\nFinal Transcript:', transcript);
+    const finalTranscript = transcript.trim();
+    console.log('\nFinal Transcript:', finalTranscript);
     
-    // Send transcript to parent component
-    onTranscriptComplete(transcript);
-    console.log('Transcript sent to parent component', transcript);
+    // Send final transcript to parent component
+    if (finalTranscript) {
+      onTranscriptComplete(finalTranscript);
+      console.log('Transcript sent to parent component:', finalTranscript);
+    }
 
     // Stop the WebSocket first to prevent any more data being sent
     if (websocketRef.current) {
@@ -175,6 +178,8 @@ const VoiceRecorder = ({ onTranscriptComplete }: VoiceRecorderProps) => {
 
     setIsRecording(false);
   };
+
+  // Clean up on component unmount
 
   return (
     <div className="p-4 bg-white rounded-lg shadow-md">

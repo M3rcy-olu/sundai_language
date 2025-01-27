@@ -22,11 +22,17 @@ export default function LLMToSpeech({ initialInput }: LLMToSpeechProps) {
   
   useEffect(() => {
     if (initialInput) {
+      console.log('Received initialInput:', initialInput);
       setUserInput(initialInput);
-      console.log('UserInput:', userInput);
-      handleSubmit(new Event('submit') as any);
     }
   }, [initialInput]);
+
+  useEffect(() => {
+    if (userInput) {
+      console.log('Submitting userInput:', userInput);
+      handleSubmit(new Event('submit') as any);
+    }
+  }, [userInput]);
 
   const playAudio = async (audioData: ArrayBuffer) => {
     const audioContext = new AudioContext();
