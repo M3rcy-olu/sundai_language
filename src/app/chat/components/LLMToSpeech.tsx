@@ -5,6 +5,7 @@ import { generateSpeech } from "../../../api/typescript/elevenlabsTTS";
 import Transcription from "./transcription";
 import Button from "@/app/components/button";
 import TextTransition from "./TextTransition";
+import { AnimatePresence, motion } from "framer-motion";
 
 export default function LLMToSpeech() {
   const [userInput, setUserInput] = useState("");
@@ -60,7 +61,7 @@ export default function LLMToSpeech() {
         <div>
           {response.map((item, index) => (
             <div key={index}>
-              <div delay={300}>
+              <AnimatePresence mode="wait">
                 <TextTransition
                   key={item.Spanish_Response || item.English_Analysis}
                 >
@@ -69,7 +70,7 @@ export default function LLMToSpeech() {
                     feedback={item.English_Analysis}
                   />
                 </TextTransition>
-              </div>
+              </AnimatePresence>
             </div>
           ))}
         </div>
