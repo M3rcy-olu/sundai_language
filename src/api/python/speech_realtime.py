@@ -15,7 +15,7 @@ from openai import OpenAI  # Add OpenAI client import
 from scipy import signal
 
 # Load environment variables
-load_dotenv('../../.env.local')
+load_dotenv()
 
 # REPLICATE CODE
 # import replicate
