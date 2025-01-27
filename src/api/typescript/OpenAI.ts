@@ -24,3 +24,24 @@ export const generateResponse = async (userPrompt: string, scenarioPrompt: strin
     throw error;
   }
 };
+
+export const generateScenarioPrompt = async (userScenarioPrompt: string) => {
+  try {
+    console.log('Generating scenario prompt...');
+    const response = await axios.post(`${API_BASE_URL}/api/generatePrompt`, {
+      user_scenario_prompt: userScenarioPrompt
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      httpsAgent: new (require('https').Agent)({  
+        rejectUnauthorized: false
+      })
+    });
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error generating scenario prompt:', error);
+    throw error;
+  }
+};

@@ -4,6 +4,10 @@ import json
 from openai import OpenAI
 import os
 from pydantic import BaseModel
+from dotenv import load_dotenv
+
+# Load the .env file
+load_dotenv()
 
 # Initialize the OpenAI client
 api_key = os.getenv("OPENAI_API_KEY")
@@ -58,7 +62,7 @@ async def generate_prompt(request: GenerateRequest):
             ]
         )
         
-        print("4. OpenAI Response received")
+        print("4. OpenAI Response received", scenario_system_prompt)
         
         
         parsed_content = json.loads(scenario_response.choices[0].message.content)
